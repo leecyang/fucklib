@@ -7,6 +7,8 @@ const InteractiveReserve: React.FC = () => {
   const [seats, setSeats] = useState<Seat[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [reserveInfo, setReserveInfo] = useState<any>(null);
+  const [libsError, setLibsError] = useState<string | null>(null);
+  const [seatsError, setSeatsError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLibs();
@@ -16,9 +18,16 @@ const InteractiveReserve: React.FC = () => {
   const fetchLibs = async () => {
     try {
       const res = await libApi.getLibs();
-      setLibs(res.data);
+      const data = res.data || [];
+      setLibs(data);
+      setLibsError(data.length === 0 ? '未获取到场馆数据，请检查授权或稍后重试' : null);
+      if (data.length > 0) {
+        const firstOpen = data.find((l) => l.status === 1) || data[0];
+        handleLibChange(firstOpen.id);
+      }
     } catch (err) {
       console.error(err);
+      setLibsError('场馆列表获取失败，请先登录并在设置页绑定微信 Cookie');
     }
   };
   
@@ -35,12 +44,19 @@ const InteractiveReserve: React.FC = () => {
     setSelectedLib(libId);
     setSeats(null);
     setLoading(true);
+    setSeatsError(null);
     try {
       const res = await libApi.getLayout(libId);
-      const seatList = res.data.lib_layout?.seats || [];
+      if (!res.data || !res.data.lib_layout || !Array.isArray(res.data.lib_layout.seats)) {
+        setSeatsError('未获取到座位数据，可能是 Cookie 失效或场馆暂不可用');
+        setSeats([]);
+        return;
+      }
+      const seatList = res.data.lib_layout.seats || [];
       setSeats(seatList);
     } catch (err) {
       console.error(err);
+      setSeatsError('座位数据获取失败，请稍后重试');
     } finally {
         setLoading(false);
     }
@@ -120,22 +136,26 @@ const InteractiveReserve: React.FC = () => {
       <div className="bg-white p-4 rounded-lg shadow-sm border space-y-4">
         <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">选择场馆 (图书馆 - 楼层)</label>
-                <select 
-                    className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
-                    value={selectedLib || ''} 
-                    onChange={(e) => handleLibChange(Number(e.target.value))}
-                >
-                    <option value="">请选择...</option>
-                    {libs.map(l => <option key={l.id} value={l.id}>{l.name} {l.status === 1 ? '' : '(闭馆)'}</option>)}
-                </select>
-            </div>
-        </div>
-      </div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">选择场馆 (图书馆 - 楼层)</label>
+                 <select 
+                     className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
+                     value={selectedLib || ''} 
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleLibChange(Number(e.target.value))}
+                    disabled={loading}
+                 >
+                     <option value="">请选择...</option>
+                    {libs.map((l: Lib) => <option key={l.id} value={l.id}>{l.name} {l.status === 1 ? '' : '(闭馆)'}</option>)}
+                 </select>
+                {libsError && <div className="text-red-600 text-sm mt-2">{libsError}</div>}
+             </div>
+         </div>
+       </div>
 
       {loading && <div className="text-center py-8 text-gray-500">正在加载座位信息...</div>}
 
-      {seats && (
+      {seatsError && !loading && <div className="text-center py-6 text-red-600">{seatsError}</div>}
+
+      {seats && seats.length > 0 && (
           <div className="bg-white p-6 rounded-lg shadow-sm border">
               <h4 className="font-bold mb-4 text-gray-700 flex items-center gap-2">
                    <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
@@ -143,6 +163,9 @@ const InteractiveReserve: React.FC = () => {
               </h4>
               {renderSeats(seats)}
           </div>
+      )}
+      {!loading && seats && seats.length === 0 && (
+        <div className="text-center py-6 text-gray-500">暂无座位数据</div>
       )}
     </div>
   );
