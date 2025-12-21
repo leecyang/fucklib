@@ -79,6 +79,7 @@ export const libApi = {
     reserveSeat: (libId: number, seatKey: string) => api.post('/library/reserve', null, { params: { lib_id: libId, seat_key: seatKey } }),
     cancelReserve: () => api.delete('/library/reserve'),
     getFrequentSeats: () => api.get<any[]>('/library/frequent-seats'),
+    getUserInfo: () => api.get<any>('/library/user_info'),
 };
 
 export default api;

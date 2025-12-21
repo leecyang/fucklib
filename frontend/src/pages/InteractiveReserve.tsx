@@ -6,7 +6,7 @@ const InteractiveReserve: React.FC = () => {
   const [floors, setFloors] = useState<Floor[]>([]);
   const [selectedLib, setSelectedLib] = useState<number | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
-  const [seats, setSeats] = useState<{regular: Seat[], monitor: Seat[]} | null>(null);
+  const [seats, setSeats] = useState<Seat[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [reserveInfo, setReserveInfo] = useState<any>(null);
 
@@ -50,9 +50,8 @@ const InteractiveReserve: React.FC = () => {
     setLoading(true);
     try {
       const res = await libApi.getLayout(floorId);
-      const regular = res.data.seats_regular || [];
-      const monitor = res.data.seats_monitor || [];
-      setSeats({ regular, monitor });
+      const seatList = res.data.lib_layout?.seats || [];
+      setSeats(seatList);
     } catch (err) {
       console.error(err);
     } finally {
@@ -164,24 +163,12 @@ const InteractiveReserve: React.FC = () => {
       {loading && <div className="text-center py-8 text-gray-500">正在加载座位信息...</div>}
 
       {seats && (
-          <div className="space-y-8 bg-white p-6 rounded-lg shadow-sm border">
-              {seats.monitor.length > 0 && (
-                  <div>
-                      <h4 className="font-bold mb-4 text-purple-700 flex items-center gap-2">
-                          <span className="w-2 h-6 bg-purple-500 rounded-full"></span>
-                          显示器座位 (Y区)
-                      </h4>
-                      {renderSeats(seats.monitor)}
-                  </div>
-              )}
-
-              <div>
-                  <h4 className="font-bold mb-4 text-gray-700 flex items-center gap-2">
-                       <span className="w-2 h-6 bg-gray-500 rounded-full"></span>
-                       普通座位
-                  </h4>
-                  {renderSeats(seats.regular)}
-              </div>
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+              <h4 className="font-bold mb-4 text-gray-700 flex items-center gap-2">
+                   <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
+                   座位分布
+              </h4>
+              {renderSeats(seats)}
           </div>
       )}
     </div>

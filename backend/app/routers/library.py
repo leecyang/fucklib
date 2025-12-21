@@ -93,6 +93,13 @@ def get_seat_info_alias(service: LibService = Depends(get_lib_service)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/user_info")
+def get_user_info(service: LibService = Depends(get_lib_service)):
+    try:
+        return service.get_user_info()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/get_cookie_from_url")
 def get_cookie_from_url(
     url: str, 

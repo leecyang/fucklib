@@ -219,19 +219,7 @@ class LibService:
         data = self._post(payload)
         libs = data.get('data', {}).get('userAuth', {}).get('reserve', {}).get('libs', [])
         if libs:
-            lib_data = libs[0]
-            # Categorize seats
-            seats = lib_data.get('lib_layout', {}).get('seats', [])
-            regular = []
-            monitor = []
-            for seat in seats:
-                if seat.get('name', '').upper().startswith('Y'):
-                    monitor.append(seat)
-                else:
-                    regular.append(seat)
-            lib_data['seats_regular'] = regular
-            lib_data['seats_monitor'] = monitor
-            return lib_data
+            return libs[0]
         logger.warning(f"get_lib_layout returned no libs. Response: {data}")
         return None
 

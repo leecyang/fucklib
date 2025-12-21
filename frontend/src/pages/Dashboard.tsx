@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import api from '../api/client';
+import api, { libApi } from '../api/client';
 
 export default function Dashboard() {
   const [config, setConfig] = useState<any>(null);
   const [seatInfo, setSeatInfo] = useState<any>(null);
+  const [userInfo, setUserInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,6 +19,13 @@ export default function Dashboard() {
       if (configRes.data.cookie) {
         const seatRes = await api.get('/library/seat_info');
         setSeatInfo(seatRes.data);
+        
+        try {
+            const userRes = await libApi.getUserInfo();
+            setUserInfo(userRes.data.currentUser);
+        } catch (e) {
+            console.error("Failed to fetch user info", e);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -33,6 +41,39 @@ export default function Dashboard() {
       <h1 className="text-3xl font-bold text-gray-800">首页概览</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* User Info Card */}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4">个人信息</h2>
+          {userInfo ? (
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">姓名：</span>
+                <span className="font-bold">{userInfo.user_student_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">学号：</span>
+                <span className="font-mono">{userInfo.user_student_no}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">学校：</span>
+                <span>{userInfo.user_sch}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">性别：</span>
+                <span>{userInfo.user_sex}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">上次登录：</span>
+                <span className="text-sm text-gray-500">{userInfo.user_last_login}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-500">
+              {config?.cookie ? "获取个人信息失败" : "请先配置微信 Cookie"}
+            </p>
+          )}
+        </div>
+
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">状态概览</h2>
           <div className="space-y-2">
