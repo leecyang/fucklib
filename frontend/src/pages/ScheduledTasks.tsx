@@ -34,6 +34,20 @@ const ScheduledTasks: React.FC = () => {
             alert('删除失败');
         }
     }
+
+    const formatCron = (cron: string) => {
+        try {
+            const parts = cron.split(' ');
+            if (parts.length >= 2) {
+                const minute = parts[0].padStart(2, '0');
+                const hour = parts[1].padStart(2, '0');
+                return `${hour}:${minute}`;
+            }
+            return cron;
+        } catch (e) {
+            return cron;
+        }
+    };
     
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -94,7 +108,7 @@ const ScheduledTasks: React.FC = () => {
                             {task.task_type === 'seat_tomorrow' && '🌙 明日抢座'}
                         </h3>
                         <p className="text-gray-600 mb-2">
-                            时间: <span className="font-mono font-bold bg-gray-100 px-1 rounded">{task.cron_expression}</span>
+                            时间: <span className="font-mono font-bold bg-gray-100 px-1 rounded">{formatCron(task.cron_expression)}</span>
                         </p>
                         
                         {task.task_type.startsWith('seat') && (
