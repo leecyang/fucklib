@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { libApi, type Lib, type Floor, type Seat } from '../api/client';
+import { libApi, type Lib, type Seat } from '../api/client';
 
 const InteractiveReserve: React.FC = () => {
   const [libs, setLibs] = useState<Lib[]>([]);
-  const [floors, setFloors] = useState<Floor[]>([]);
   const [selectedLib, setSelectedLib] = useState<number | null>(null);
-  const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [seats, setSeats] = useState<Seat[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [reserveInfo, setReserveInfo] = useState<any>(null);
