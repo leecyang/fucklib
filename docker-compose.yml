@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: fucklib_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: mysql+pymysql://fucklib:050426@mysql_2l4p-mysql_2L4p-1:3306/fucklib
+    networks:
+      - baota_net
+
+  frontend:
+    build: ./frontend
+    container_name: fucklib_frontend
+    restart: always
+    ports:
+      - "18080:80"
+    networks:
+      - baota_net
+
+networks:
+  baota_net:
+    external: true
+
+# volumes:
+#   mysql_data:

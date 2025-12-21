@@ -1,0 +1,157 @@
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+from sqlalchemy.orm import Session
+from app import crud, models, database
+from app.services.lib_service import LibService
+from app.services.auth_service import AuthService
+import logging
+
+logger = logging.getLogger(__name__)
+
+scheduler = BackgroundScheduler(timezone='Asia/Shanghai')
+
+def run_seat_task(user_id: int, task_id: int):
+    db = database.SessionLocal()
+    task = None
+    try:
+        user = crud.get_user(db, user_id)
+        task = db.query(models.Task).filter(models.Task.id == task_id).first()
+        if not user or not user.wechat_config or not user.wechat_config.cookie:
+            logger.error(f"User {user_id} not ready for seat task")
+            if task:
+                task.last_status = 'failed'
+                task.last_message = '用户未绑定微信 Cookie'
+            return
+
+        service = LibService(user.wechat_config.cookie)
+        
+        # Strategy: Custom or Default
+        strategy = task.config.get('strategy', 'custom') # 'custom' or 'default_all'
+        
+        target_seats = []
+        if strategy == 'default_all':
+            # Fetch all default seats
+            try:
+                often_seats = service.get_seat_info()
+                target_seats = [{'lib_id': s['lib_id'], 'seat_key': s['seat_key']} for s in often_seats]
+            except Exception as e:
+                logger.error(f"Failed to fetch default seats: {e}")
+                if task:
+                     task.last_message = f"获取预选座位失败: {str(e)}"
+        else:
+            # Custom
+            target_seats.append({
+                'lib_id': task.config.get('lib_id'),
+                'seat_key': task.config.get('seat_key')
+            })
+
+        if not target_seats:
+             raise Exception("没有可用的目标座位")
+
+        last_error = None
+        success = False
+        
+        for seat in target_seats:
+            try:
+                if task.task_type == 'seat_today':
+                    service.reserve_seat(seat['lib_id'], seat['seat_key'])
+                elif task.task_type == 'seat_tomorrow':
+                    service.prereserve_seat(seat['lib_id'], seat['seat_key'])
+                success = True
+                break # Stop if success
+            except Exception as e:
+                last_error = e
+                continue # Try next
+        
+        if success:
+            task.last_status = 'success'
+            task.last_message = '执行成功'
+        else:
+            raise last_error or Exception("所有尝试均失败")
+
+    except Exception as e:
+        logger.error(f"Task {task_id} failed: {e}")
+        if task:
+            task.last_status = 'failed'
+            task.last_message = str(e)
+    finally:
+        if task:
+            task.last_run = database.func.now()
+            db.commit()
+        db.close()
+
+def run_signin_task(user_id: int, task_id: int):
+    db = database.SessionLocal()
+    task = None
+    try:
+        user = crud.get_user(db, user_id)
+        task = db.query(models.Task).filter(models.Task.id == task_id).first()
+        if not user or not user.wechat_config or not user.wechat_config.sess_id:
+             logger.error(f"User {user_id} not ready for signin task")
+             if task:
+                task.last_status = 'failed'
+                task.last_message = '用户未绑定微信 SessID'
+             return
+
+        res = AuthService.sign_in(user.wechat_config.sess_id, user.wechat_config.major, user.wechat_config.minor)
+        task.last_status = 'success'
+        task.last_message = res
+    except Exception as e:
+        logger.error(f"Task {task_id} failed: {e}")
+        if task:
+            task.last_status = 'failed'
+            task.last_message = str(e)
+    finally:
+        if task:
+            task.last_run = database.func.now()
+            db.commit()
+        db.close()
+
+def add_task_job(task: models.Task):
+    job_id = str(task.id)
+    if scheduler.get_job(job_id):
+        scheduler.remove_job(job_id)
+        
+    if not task.is_enabled or not task.cron_expression:
+        return
+
+    func = None
+    if task.task_type in ['seat_today', 'seat_tomorrow']:
+        func = run_seat_task
+    elif task.task_type == 'signin':
+        func = run_signin_task
+        
+    if func:
+        try:
+            # Simple Cron parsing: Assume 5 parts "m h d m w"
+            # APScheduler CronTrigger format
+            scheduler.add_job(
+                func,
+                CronTrigger.from_crontab(task.cron_expression),
+                id=job_id,
+                args=[task.user_id, task.id],
+                replace_existing=True
+            )
+            logger.info(f"Added job {job_id} for task {task.task_type}")
+        except Exception as e:
+            logger.error(f"Failed to add job {job_id}: {e}")
+
+def remove_task_job(task_id: int):
+    job_id = str(task_id)
+    if scheduler.get_job(job_id):
+        scheduler.remove_job(job_id)
+        logger.info(f"Removed job {job_id}")
+
+def start_scheduler():
+    # Load tasks
+    db = database.SessionLocal()
+    try:
+        tasks = db.query(models.Task).filter(models.Task.is_enabled == True).all()
+        for task in tasks:
+            add_task_job(task)
+    except Exception as e:
+        logger.error(f"Failed to load tasks: {e}")
+    finally:
+        db.close()
+        
+    scheduler.start()

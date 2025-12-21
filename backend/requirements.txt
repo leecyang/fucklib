@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+sqlalchemy
+pymysql
+requests
+pycryptodome
+apscheduler
+python-jose[cryptography]
+passlib
+bcrypt==3.2.0
+pydantic
+python-multipart
+websockets
