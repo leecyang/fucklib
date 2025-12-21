@@ -35,38 +35,27 @@ const InteractiveReserve: React.FC = () => {
 
   const handleLibChange = async (libId: number) => {
     setSelectedLib(libId);
-    setSelectedFloor(null);
     setSeats(null);
-    try {
-      const res = await libApi.getFloors(libId);
-      setFloors(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleFloorChange = async (floorId: number) => {
-    setSelectedFloor(floorId);
     setLoading(true);
     try {
-      const res = await libApi.getLayout(floorId);
+      const res = await libApi.getLayout(libId);
       const seatList = res.data.lib_layout?.seats || [];
       setSeats(seatList);
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
   const handleReserve = async (seatKey: string) => {
-    if (!selectedFloor) return;
+    if (!selectedLib) return;
     if (!confirm(`确认预约座位 ${seatKey} 吗？`)) return;
     try {
-      await libApi.reserveSeat(selectedFloor, seatKey);
+      await libApi.reserveSeat(selectedLib, seatKey);
       alert('预约成功');
       fetchReserveInfo();
-      handleFloorChange(selectedFloor);
+      handleLibChange(selectedLib);
     } catch (err: any) {
       alert('预约失败: ' + (err.response?.data?.detail || err.message));
     }
@@ -78,7 +67,7 @@ const InteractiveReserve: React.FC = () => {
           await libApi.cancelReserve();
           alert('取消成功');
           setReserveInfo(null);
-          if (selectedFloor) handleFloorChange(selectedFloor);
+          if (selectedLib) handleLibChange(selectedLib);
       } catch (err: any) {
           alert('取消失败: ' + (err.response?.data?.detail || err.message));
       }
@@ -133,7 +122,7 @@ const InteractiveReserve: React.FC = () => {
       <div className="bg-white p-4 rounded-lg shadow-sm border space-y-4">
         <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">选择图书馆</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">选择场馆 (图书馆 - 楼层)</label>
                 <select 
                     className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
                     value={selectedLib || ''} 
@@ -143,20 +132,6 @@ const InteractiveReserve: React.FC = () => {
                     {libs.map(l => <option key={l.id} value={l.id}>{l.name} {l.status === 1 ? '' : '(闭馆)'}</option>)}
                 </select>
             </div>
-
-            {floors.length > 0 && (
-                <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">选择楼层</label>
-                    <select 
-                        className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
-                        value={selectedFloor || ''} 
-                        onChange={(e) => handleFloorChange(Number(e.target.value))}
-                    >
-                        <option value="">请选择...</option>
-                        {floors.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                    </select>
-                </div>
-            )}
         </div>
       </div>
 

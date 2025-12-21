@@ -174,38 +174,28 @@ class LibService:
     # --- Interactive Info ---
     def get_lib_list(self):
         payload = {
-            "operationName": "queryLibList",
-            "query": "query queryLibList{libList{id name status}}",
+            "operationName": "list",
+            "query": "query list { userAuth { reserve { libs { lib_id lib_name lib_floor is_open } } } }",
             "variables": {}
         }
-        # Note: The doc says queryLibList. Current code calls 'index' to get some info.
-        # If this fails, we might need to check how to get lib list.
-        # But let's assume the doc is correct for the "Future" upgrade.
-        # If the API endpoint is the same /graphql, it should work.
-        # However, looking at legacy code, there is no get_lib_list.
-        # I'll implement it trusting the doc.
         try:
             data = self._post(payload)
-            lib_list = data.get('data', {}).get('libList', [])
-            if not lib_list:
-                logger.warning(f"get_lib_list returned empty. Response: {data}")
-            return lib_list
+            libs = data.get('data', {}).get('userAuth', {}).get('reserve', {}).get('libs', [])
+            result = []
+            for lib in libs:
+                result.append({
+                    "id": lib.get('lib_id'),
+                    "name": f"{lib.get('lib_name')} - {lib.get('lib_floor')}",
+                    "status": 1 if lib.get('is_open') else 0
+                })
+            return result
         except Exception as e:
             logger.error(f"get_lib_list failed: {e}")
             return []
 
     def get_floor_list(self, lib_id: int):
-        payload = {
-            "operationName": "queryFloorList",
-            "query": "query queryFloorList($libId:Int!){floorList(libId:$libId){id name}}",
-            "variables": {"libId": lib_id}
-        }
-        try:
-             data = self._post(payload)
-             return data.get('data', {}).get('floorList', [])
-        except Exception as e:
-             logger.error(f"get_floor_list failed: {e}")
-             return []
+        # Deprecated: get_lib_list now returns all rooms directly
+        return []
 
     def get_lib_layout(self, lib_id: int):
         payload = {
