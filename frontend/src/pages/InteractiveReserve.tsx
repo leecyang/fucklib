@@ -193,6 +193,7 @@ const InteractiveReserve: React.FC = () => {
                   const isFree = (seat as any).seat_status === 1 || seat.status === 1;
                   const isMine = reserveInfo && (reserveInfo.seat_key ? reserveInfo.seat_key === seat.key : reserveInfo?.seatKey === seat.key);
                   const isSelected = selectedSeatKey === seat.key;
+                  const isClickable = isWithinWindow && isFree;
 
                   // Modern Visual Map Logic
                   return (
@@ -204,12 +205,12 @@ const InteractiveReserve: React.FC = () => {
                                 ? "bg-indigo-600 text-white animate-pulse shadow-indigo-200 ring-2 ring-indigo-200" 
                                 : isSelected 
                                     ? "bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500 z-10 scale-110 shadow-md"
-                                    : isFree 
+                                    : isClickable
                                         ? "bg-white border border-slate-200 text-slate-600 hover:border-indigo-400 hover:shadow-md hover:-translate-y-0.5" 
                                         : "bg-slate-100 text-slate-300 border border-transparent cursor-not-allowed"
                         )}
                         onClick={() => {
-                          if (!isMine && isFree) {
+                          if (!isMine && isClickable) {
                             setSelectedSeatKey(seat.key);
                             setSelectedSeatName(seat.name);
                           }

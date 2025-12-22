@@ -133,10 +133,10 @@ export default function Settings() {
             账号状态
         </h2>
         {config?.cookie ? (
-          (wechatUserInfo?.user_deny && (wechatUserInfo.user_deny.deny_deadline || wechatUserInfo.user_deny.status === 1)) ? (
+          (wechatUserInfo?.user_deny?.deny_deadline) ? (
             <div className="bg-rose-50 border border-rose-100 p-4 rounded-lg text-rose-700">
               <span className="font-semibold block mb-1">当前账号存在预约限制</span>
-              <span className="text-sm">解除时间：<span className="font-mono font-bold">{wechatUserInfo.user_deny.deny_deadline || '未知 (请尝试刷新)'}</span></span>
+              <span className="text-sm">解除时间：<span className="font-mono font-bold">{wechatUserInfo.user_deny.deny_deadline}</span></span>
             </div>
           ) : (
             <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-lg text-emerald-700 flex items-center gap-2">

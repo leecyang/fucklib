@@ -123,7 +123,7 @@ class LibService:
                      "timerange\n forbidQrValid\n renewTimeNext\n forbidRenewTime\n forbidWechatCancle\n }\n "
                      "getSToken\n }\n currentUser {\n user_id\n user_nick\n user_mobile\n user_sex\n "
                      "user_sch_id\n user_sch\n user_last_login\n user_avatar(size: MIDDLE)\n user_adate\n "
-                     "user_student_no\n user_student_name\n area_name\n user_deny {\n deny_deadline\n status\n }\n sch "
+                     "user_student_no\n user_student_name\n area_name\n user_deny {\n deny_deadline\n }\n sch "
                      "{\n sch_id\n sch_name\n activityUrl\n isShowCommon\n isBusy\n }\n }\n }\n "
                      "ad(pos: $pos, param: $param) {\n name\n pic\n url\n }\n}",
             "variables": {"pos": "App-首页"}
