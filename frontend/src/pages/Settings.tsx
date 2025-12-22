@@ -12,7 +12,6 @@ export default function Settings() {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [invites, setInvites] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [fixing, setFixing] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -72,28 +71,6 @@ export default function Settings() {
     }
   };
 
-  const fixGhost = async () => {
-    setFixing(true);
-    try {
-      await libApi.cancelReserve();
-      const userRes = await libApi.getUserInfo();
-      setUserInfo(userRes.data.currentUser);
-      setDialog({
-        title: '已尝试解除预约',
-        body: '状态已刷新。如仍显示已预约，请重新获取授权链接并更新 Cookie 后再试。',
-        variant: 'success'
-      });
-    } catch (e: any) {
-      setDialog({
-        title: '解除失败',
-        body: e?.response?.data?.detail || '操作失败，可能需要重新授权或会话已过期（40001）。请在“微信授权”区域重新解析链接。',
-        variant: 'error'
-      });
-    } finally {
-      setFixing(false);
-    }
-  };
-
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <header>
@@ -144,22 +121,6 @@ export default function Settings() {
         ) : (
             <div className="text-slate-500 italic">请先配置微信 Cookie 后查看账号状态。</div>
         )}
-        <div className="mt-4">
-          <button
-            onClick={fixGhost}
-            disabled={fixing || !config?.cookie}
-            className={cn(
-              "w-full px-4 py-2 rounded-lg font-bold flex items-center justify-center gap-2",
-              fixing || !config?.cookie ? "bg-slate-300 text-slate-600 cursor-not-allowed" : "bg-indigo-600 text-white hover:bg-indigo-700"
-            )}
-          >
-            <RefreshCw className="w-4 h-4" />
-            {fixing ? '处理中...' : '修复幽灵预约（取消并刷新）'}
-          </button>
-          <p className="text-xs text-slate-500 mt-2">
-            当预选座位被他人占用但网站仍显示“已有预约”时，点击此按钮将尝试调用后端取消接口并刷新状态。
-          </p>
-        </div>
       </div>
 
       {/* 微信授权与扫码链接 */}

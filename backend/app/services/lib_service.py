@@ -178,49 +178,26 @@ class LibService:
             "query": "mutation cancelReserve{cancelReserve{success msg}}",
             "variables": {}
         }
-        try:
-            res = self._post(payload)
-            if 'errors' in res:
-                # Try sToken-based fallback
-                if self.withdraw_seat():
-                    return {"success": True, "msg": "Withdraw via sToken succeeded"}
-                raise Exception(res['errors'][0].get('message', 'Cancel Failed'))
-            return res.get('data', {}).get('cancelReserve')
-        except Exception as e:
-            # Network/GraphQL error, attempt fallback
-            try:
-                if self.withdraw_seat():
-                    return {"success": True, "msg": "Withdraw via sToken succeeded"}
-            except Exception:
-                pass
-            raise e
+        res = self._post(payload)
+        if 'errors' in res:
+            # Fallback to withdraw logic if this API doesn't work as expected or is same as withdraw
+            # The doc says "cancelReserve" (API 8).
+            raise Exception(res['errors'][0].get('message', 'Cancel Failed'))
+        return res.get('data', {}).get('cancelReserve')
 
     def get_reserve_info(self):
-        # First try API 9
-        try:
-            payload = {
-                "operationName": "getReserveInfo",
-                "query": "query getReserveInfo{reserveInfo{libId seatKey date status}}",
-                "variables": {}
-            }
-            res = self._post(payload)
-            if res.get('data', {}).get('reserveInfo'):
-                return res.get('data', {}).get('reserveInfo')
-            logger.info("getReserveInfo returned empty, falling back to index query.")
-        except Exception as e:
-            logger.warning(f"getReserveInfo failed: {e}")
-            
-        # Fallback to index query
+        # API 9 (getReserveInfo) is unreliable when pre-selected seat is occupied by others
+        # User instructed to rely on index API (API 8) and check if data.userAuth.reserve.reserve is null
         try:
             index_payload = {
                 "operationName": "index",
-                "query": "query index { userAuth { reserve { reserve { status lib_id seat_key } } } }",
+                "query": "query index { userAuth { reserve { reserve { status lib_id seat_key lib_name seat_name date } } } }",
                 "variables": {}
             }
             r = self._post(index_payload)
             return r.get('data', {}).get('userAuth', {}).get('reserve', {}).get('reserve')
         except Exception as e:
-            logger.error(f"Fallback get_reserve_info failed: {e}")
+            logger.error(f"get_reserve_info failed: {e}")
             return None
 
     # --- Interactive Info ---
