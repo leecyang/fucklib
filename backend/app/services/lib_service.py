@@ -250,10 +250,10 @@ class LibService:
                 return None
 
             # 1. Check status (0 or None means no valid reservation)
-            # Status: 0=None, 1=Reserved, 2=Signed In, 3=In Use, 4=Away, 5=Finished
+            # Status: 0=None, 1=Reserved, 2=Signed In, 3=In Use, 4=Away, 5=Supervised/Finished
             status = reserve_data.get('status')
-            # Fix: Only allow active statuses. 5 (Finished) means seat is released.
-            valid_statuses = [1, 2, 3, 4]
+            # Fix: Only allow active statuses.
+            valid_statuses = [1, 2, 3, 4, 5]
             if status not in valid_statuses:
                 return None
 

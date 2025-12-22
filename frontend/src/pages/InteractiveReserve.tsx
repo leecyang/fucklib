@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { libApi, type Lib, type Seat } from '../api/client';
 import { cn } from '../lib/utils';
 import { MapPin, Bluetooth, Check, X, Clock, AlertCircle } from 'lucide-react';
-import { confirm, alert } from '../components/Dialog';
+import { confirm as customConfirm, alert as customAlert } from '../components/Dialog';
 
 const InteractiveReserve: React.FC = () => {
   // ==================================================================================
@@ -63,6 +63,24 @@ const InteractiveReserve: React.FC = () => {
       try {
           const res = await libApi.getReserveInfo();
           setReserveInfo(res.data);
+          
+          // Check for supervision status (5)
+          if (res.data?.status === 5) {
+             console.log('Detected supervision status. Auto-signin scheduled in 5 minutes.');
+             // Schedule auto-signin in 5 minutes (300000 ms)
+             setTimeout(async () => {
+                 try {
+                     console.log('Triggering auto-signin for supervision...');
+                     await libApi.signin();
+                     console.log('Auto-signin triggered successfully.');
+                     // Refresh info to update status
+                     fetchReserveInfo();
+                 } catch (e) {
+                     console.error('Auto-signin failed:', e);
+                 }
+             }, 5 * 60 * 1000); 
+          }
+
           try {
             const libId = res.data?.lib_id || res.data?.libId;
             const seatKey = res.data?.seat_key || res.data?.seatKey;
@@ -147,7 +165,7 @@ const InteractiveReserve: React.FC = () => {
       const nowMin = now.getHours() * 60 + now.getMinutes();
       const within = c >= o ? (nowMin >= o && nowMin <= c) : (nowMin >= o || nowMin <= c);
       if (!within) {
-        alert(`当前楼层不在可预约时间段（${openStr} - ${closeStr}）`, '非开放时间');
+        customAlert(`当前楼层不在可预约时间段（${openStr} - ${closeStr}）`, '非开放时间');
         return;
       }
     }
@@ -165,7 +183,7 @@ const InteractiveReserve: React.FC = () => {
         displayName = frequentNames[selectedLib + ':' + seatKey];
     }
 
-    const confirmed = await confirm(
+    const confirmed = await customConfirm(
         <div className="space-y-2">
             <p>您即将预约：</p>
             <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 font-medium text-slate-700">
@@ -181,7 +199,7 @@ const InteractiveReserve: React.FC = () => {
 
     try {
       await libApi.reserveSeat(selectedLib, seatKey);
-      await alert('预约成功！请在规定时间内前往签到。', '预约成功');
+      await customAlert('预约成功！请在规定时间内前往签到。', '预约成功');
       fetchReserveInfo();
       handleLibChange(selectedLib);
     } catch (err: any) {
@@ -200,17 +218,17 @@ const InteractiveReserve: React.FC = () => {
   
   const handleReserveSelected = async () => {
     if (!selectedLib || !selectedSeatKey) {
-      alert('请先在上方选择座位', '未选择座位');
+      customAlert('请先在上方选择座位', '未选择座位');
       return;
     }
     await handleReserve(selectedSeatKey);
   };
 
   const handleCancel = async () => {
-      if(!await confirm('确定要取消当前的座位预约吗？取消后座位将被释放。', '取消预约')) return;
+      if(!await customConfirm('确定要取消当前的座位预约吗？取消后座位将被释放。', '取消预约')) return;
       try {
           await libApi.cancelReserve();
-          await alert('预约已取消', '取消成功');
+          await customAlert('预约已取消', '取消成功');
           setReserveInfo(null);
           if (selectedLib) handleLibChange(selectedLib);
       } catch (err: any) {
@@ -320,12 +338,14 @@ const InteractiveReserve: React.FC = () => {
                                       ? '已入座'
                                       : status === 4
                                         ? '暂离'
-                                        : '未知';
+                                        : status === 5
+                                          ? '被监督(请尽快签到)'
+                                          : '未知';
                                 return (
                                   <>
                                     <p className="flex items-center gap-2"><span className="opacity-70">位置：</span> <span className="font-medium">{floor}</span></p>
                                     <p className="flex items-center gap-2"><span className="opacity-70">座位：</span> <span className="font-mono font-bold bg-white/50 px-1.5 rounded">{seatName}</span></p>
-                                    <p className="flex items-center gap-2"><span className="opacity-70">状态：</span> <span className="font-medium">{statusText}</span></p>
+                                    <p className="flex items-center gap-2"><span className="opacity-70">状态：</span> <span className={cn("font-medium", status === 5 ? "text-rose-600 font-bold animate-pulse" : "")}>{statusText}</span></p>
                                   </>
                                 )
                               })()}
