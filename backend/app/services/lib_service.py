@@ -212,10 +212,33 @@ class LibService:
             }
             r = self._post(index_payload)
             reserve_data = ((r.get('data') or {}).get('userAuth') or {}).get('reserve', {}).get('reserve')
-            # Fix: Check if seat_key is present to avoid returning dict with all None values
-            if reserve_data and reserve_data.get('seat_key'):
-                return reserve_data
-            return None
+            
+            # Comprehensive validation based on user feedback
+            if not reserve_data:
+                return None
+
+            # 1. Check status (0 or None means no valid reservation)
+            # Status: 0=None, 1=Reserved, 2=Signed In, 3=In Use, 4=Away, 5=Finished
+            status = reserve_data.get('status')
+            if status is None or status == 0:
+                return None
+
+            # 2. Check seat_key
+            if not reserve_data.get('seat_key'):
+                return None
+
+            # 3. Check expiration
+            exp_date = reserve_data.get('exp_date')
+            if exp_date:
+                try:
+                    # Ensure comparison is valid (time.time() is float, exp_date should be int/float)
+                    if time.time() > float(exp_date):
+                        return None
+                except (ValueError, TypeError):
+                    # If exp_date format is unexpected, ignore expiration check or log warning
+                    pass
+
+            return reserve_data
         except Exception as e:
             logger.error(f"get_reserve_info failed: {e}")
             return None
