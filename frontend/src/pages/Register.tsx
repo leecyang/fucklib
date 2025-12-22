@@ -17,6 +17,7 @@ export default function Register() {
         password,
         invite_code: inviteCode
       });
+      alert('注册成功！请使用新账号登录。');
       navigate('/login');
     } catch (err: any) {
       setError(err.response?.data?.detail || '注册失败，请稍后重试');

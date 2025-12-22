@@ -10,7 +10,13 @@ api.interceptors.response.use(
     const status = error?.response?.status;
     const detail = error?.response?.data?.detail || '';
     const msg = String(detail).toLowerCase();
-    if (status === 403 || msg.includes('40001') || msg.includes('access denied') || msg.includes('临时限制')) {
+    
+    if (status === 401) {
+      localStorage.removeItem('token');
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    } else if (status === 403 || msg.includes('40001') || msg.includes('access denied') || msg.includes('临时限制')) {
       alert('会话受限或被拒绝，请刷新 Cookie / SessID 或稍后再试');
     }
     return Promise.reject(error);

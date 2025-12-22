@@ -26,7 +26,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-slate-100">
       <div className="bg-white/90 backdrop-blur p-10 rounded-2xl shadow-xl w-full max-w-md border border-blue-50">
-        <h2 className="text-3xl font-bold mb-2 text-center text-gray-900">登录 FuckLib 管理后台</h2>
+        <h2 className="text-3xl font-bold mb-2 text-center text-gray-900">登录 FuckLib</h2>
         <p className="text-sm text-gray-500 mb-6 text-center">使用管理员邀请注册的账号密码登录系统</p>
         {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">

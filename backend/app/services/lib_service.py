@@ -96,6 +96,8 @@ class LibService:
                         code = e.get('code')
                         if code == 40001 or ('access denied' in str(msg).lower()):
                             raise Exception('Cookie失效或账号被临时限制(40001)')
+                        if code == 40005 or '绑定学号' in str(msg):
+                            raise Exception('需要绑定学号(40005)')
                 except Exception as ex:
                     raise ex
             return data
@@ -129,7 +131,8 @@ class LibService:
         if 'errors' in data:
             raise Exception(data['errors'][0].get('message', 'Unknown API Error'))
         
-        user_auth = data.get('data', {}).get('userAuth')
+        # Safe access to data.get('data') which might be None
+        user_auth = (data.get('data') or {}).get('userAuth')
         if not user_auth:
             raise Exception('Failed to get user info')
             
@@ -195,7 +198,7 @@ class LibService:
                 "variables": {}
             }
             r = self._post(index_payload)
-            return r.get('data', {}).get('userAuth', {}).get('reserve', {}).get('reserve')
+            return ((r.get('data') or {}).get('userAuth') or {}).get('reserve', {}).get('reserve')
         except Exception as e:
             logger.error(f"get_reserve_info failed: {e}")
             return None
@@ -209,7 +212,7 @@ class LibService:
         }
         try:
             data = self._post(payload)
-            libs = data.get('data', {}).get('userAuth', {}).get('reserve', {}).get('libs', [])
+            libs = ((data.get('data') or {}).get('userAuth') or {}).get('reserve', {}).get('libs') or []
             result = []
             for lib in libs:
                 result.append({
@@ -236,7 +239,7 @@ class LibService:
             "variables": {"libId": lib_id}
         }
         data = self._post(payload)
-        libs = data.get('data', {}).get('userAuth', {}).get('reserve', {}).get('libs', [])
+        libs = ((data.get('data') or {}).get('userAuth') or {}).get('reserve', {}).get('libs') or []
         if libs:
             return libs[0]
         logger.warning(f"get_lib_layout returned no libs. Response: {data}")
@@ -269,7 +272,7 @@ class LibService:
             "query": "query prereserveCheckMsg {\n userAuth {\n prereserve {\n prereserveCheckMsg\n }\n }\n}"
         }
         r = self._post(check_payload)
-        msg = r.get('data', {}).get('userAuth', {}).get('prereserve', {}).get('prereserveCheckMsg')
+        msg = ((r.get('data') or {}).get('userAuth') or {}).get('prereserve', {}).get('prereserveCheckMsg')
         
         if msg == '':
             # Queue
