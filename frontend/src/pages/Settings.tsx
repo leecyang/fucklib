@@ -9,7 +9,8 @@ export default function Settings() {
   const [authUrl, setAuthUrl] = useState('');
   const [sessUrl, setSessUrl] = useState('');
   const [dialog, setDialog] = useState<{ title: string; body: string; variant: 'success' | 'error' | 'info' } | null>(null);
-  const [userInfo, setUserInfo] = useState<any>(null);
+  const [wechatUserInfo, setWechatUserInfo] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [invites, setInvites] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const navigate = useNavigate();
@@ -20,29 +21,46 @@ export default function Settings() {
 
   const loadConfig = async () => {
     try {
+      // 1. Get Library/Wechat Config
       const res = await api.get('/library/config');
       setConfig(res.data);
+      
+      // 2. Get Wechat User Info if cookie exists
       if (res.data?.cookie) {
         try {
           const userRes = await libApi.getUserInfo();
-          setUserInfo(userRes.data.currentUser);
+          setWechatUserInfo(userRes.data.currentUser);
         } catch (e) {
           console.error('获取用户信息失败', e);
-          setUserInfo(null);
+          setWechatUserInfo(null);
         }
       } else {
-        setUserInfo(null);
+        setWechatUserInfo(null);
       }
+
+      // 3. Get Current User Info (Check Admin)
       try {
-        // Try to fetch admin data, but skip global error handler (403 Forbidden)
-        const inv = await adminApi.getInvites({ skipErrorHandler: true });
-        setInvites(inv.data || []);
-        const usr = await adminApi.getUsers({ skipErrorHandler: true });
-        setUsers(usr.data || []);
+        // Use authApi.getMe() to check current user role
+        // Need to import authApi first or use api.get('/auth/me')
+        const meRes = await api.get('/auth/me');
+        const me = meRes.data;
+        setCurrentUser(me);
+
+        if (me.is_admin) {
+           const inv = await adminApi.getInvites();
+           setInvites(inv.data || []);
+           const usr = await adminApi.getUsers();
+           setUsers(usr.data || []);
+        } else {
+           setInvites([]);
+           setUsers([]);
+        }
       } catch (e) {
+        console.error('获取当前用户失败', e);
         setInvites([]);
         setUsers([]);
       }
+
     } catch (err) {
       console.error(err);
     }
@@ -117,10 +135,10 @@ export default function Settings() {
             账号状态
         </h2>
         {config?.cookie ? (
-          userInfo?.user_deny?.deny_deadline ? (
+          wechatUserInfo?.user_deny?.deny_deadline ? (
             <div className="bg-rose-50 border border-rose-100 p-4 rounded-lg text-rose-700">
               <span className="font-semibold block mb-1">当前账号存在预约限制</span>
-              <span className="text-sm">解除时间：<span className="font-mono font-bold">{userInfo.user_deny.deny_deadline}</span></span>
+              <span className="text-sm">解除时间：<span className="font-mono font-bold">{wechatUserInfo.user_deny.deny_deadline}</span></span>
             </div>
           ) : (
             <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-lg text-emerald-700 flex items-center gap-2">

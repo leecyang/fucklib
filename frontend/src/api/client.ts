@@ -91,6 +91,10 @@ export const adminApi = {
     generateInvite: () => api.post<InviteCode>('/admin/invite-codes'),
 };
 
+export const authApi = {
+    getMe: () => api.get<User>('/auth/me'),
+};
+
 export const taskApi = {
     getTasks: () => api.get<Task[]>('/tasks/'),
     createTask: (data: any) => api.post<Task>('/tasks/', data),

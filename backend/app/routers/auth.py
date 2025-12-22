@@ -71,3 +71,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         return crud.create_user(db=db, user=user)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/me", response_model=schemas.UserResponse)
+async def read_users_me(current_user: models.User = Depends(get_current_user)):
+    return current_user
