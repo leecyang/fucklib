@@ -35,7 +35,7 @@ export default function Dashboard() {
       }
       
       if (configRes.data.cookie) {
-        const seatRes = await api.get('/library/seat_info');
+        const seatRes = await libApi.getReserveInfo();
         setSeatInfo(seatRes.data);
         // Preload layouts for involved libs
         const seatsArr = Array.isArray(seatRes.data) ? seatRes.data : seatRes.data ? [seatRes.data] : [];
@@ -133,12 +133,11 @@ export default function Dashboard() {
              {seatInfo && (Array.isArray(seatInfo) ? seatInfo.length > 0 : seatInfo) ? (
                 <div className="space-y-4 relative z-10">
                    {(() => {
-                      const seats = Array.isArray(seatInfo) ? seatInfo : [seatInfo];
-                      const seat = seats[0]; // Display first seat for now
-                      const lib = libs.find(l => l.id === seat.lib_id);
-                      const floor = lib ? (lib.name.split(' - ')[1] || lib.name) : seat.lib_id;
-                      const seatObj = layoutCache[seat.lib_id]?.[seat.seat_key];
-                      const seatName = seatObj?.name || seat.info || seat.seat_key;
+            const seat = seatInfo;
+            const lib = libs.find(l => l.id === (seat.lib_id || seat.libId));
+            const floor = lib ? (lib.name.split(' - ')[1] || lib.name) : (seat.lib_id || seat.libId);
+            const seatObj = layoutCache[seat.lib_id || seat.libId]?.[seat.seat_key || seat.seatKey];
+            const seatName = seatObj?.name || seat.seat_name || seat.seatKey || seat.seat_key;
                       
                       return (
                           <>
@@ -148,11 +147,25 @@ export default function Dashboard() {
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div className="bg-white/10 rounded-lg px-3 py-2">
-                                    <div className="opacity-70">状态</div>
+                                <div className="opacity-70">状态</div>
+                                {(() => {
+                                  const status = seat.status;
+                                  const text = seat.selection_status === 'reserved'
+                                    ? '未签到'
+                                    : status === 2
+                                      ? '已签到'
+                                      : status === 3
+                                        ? '已入座'
+                                        : status === 4
+                                          ? '暂离'
+                                          : '未知';
+                                  return (
                                     <div className="mt-1 inline-flex items-center gap-2 px-2 py-0.5 bg-white/20 rounded-full text-xs backdrop-blur-sm">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                        已预约
+                                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                      {text}
                                     </div>
+                                  );
+                                })()}
                                 </div>
                                 <div className="bg-white/10 rounded-lg px-3 py-2">
                                     <div className="opacity-70">蓝牙</div>

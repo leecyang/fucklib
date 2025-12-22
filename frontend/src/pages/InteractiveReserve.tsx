@@ -230,7 +230,7 @@ const InteractiveReserve: React.FC = () => {
                           <Clock className="w-6 h-6" />
                       </div>
                       <div>
-                          <h3 className="font-bold text-indigo-900">当前已有预约</h3>
+                          <h3 className="font-bold text-indigo-900">当前有效预约</h3>
                           <div className="text-indigo-700 text-sm mt-1 space-y-0.5">
                               {(() => {
                                 const libId = reserveInfo.lib_id || reserveInfo.libId;
@@ -238,7 +238,16 @@ const InteractiveReserve: React.FC = () => {
                                 const lib = libs.find(l => l.id === libId);
                                 const floor = lib ? (lib.name.split(' - ')[1] || lib.name) : libId;
                                 const seatName = reserveSeatName || (selectedLib === libId && Array.isArray(seats) ? (seats.find(s => s.key === seatKey)?.name || seatKey) : seatKey);
-                                const statusText = reserveInfo.status === 3 ? '已入座' : '未签到';
+                                const status = reserveInfo.status;
+                                const statusText = reserveInfo.selection_status === 'reserved'
+                                  ? '未签到'
+                                  : status === 2
+                                    ? '已签到'
+                                    : status === 3
+                                      ? '已入座'
+                                      : status === 4
+                                        ? '暂离'
+                                        : '未知';
                                 return (
                                   <>
                                     <p className="flex items-center gap-2"><span className="opacity-70">位置：</span> <span className="font-medium">{floor}</span></p>
@@ -259,7 +268,7 @@ const InteractiveReserve: React.FC = () => {
           {/* Quick Reserve Frequent Seats */}
           {frequent && frequent.length > 0 && (
             <div className="mb-6">
-                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">常用座位</h4>
+                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">我的备选</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
                     {frequent.map((s) => (
                     <button

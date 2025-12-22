@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Environments
+.env
+.env.*
+.venv/
+venv/
+ENV/
+env/
+
+# Build & dist
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# Test & coverage cache
+.pytest_cache/
+.tox/
+.coverage
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+
+# IDE & editor
+.vscode/
+.idea/
+
+# Logs & misc
+logs/
+*.log
+.DS_Store
+
+# Node artifacts (if any submodule)
+node_modules/
+

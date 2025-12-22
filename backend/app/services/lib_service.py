@@ -145,7 +145,15 @@ class LibService:
         if not oftenseat:
             return []
         
-        return oftenseat
+        enriched = []
+        for item in oftenseat:
+            try:
+                obj = dict(item)
+                obj['selection_status'] = 'pre-selected'
+                enriched.append(obj)
+            except Exception:
+                pass
+        return enriched
 
     # --- Reserve ---
     def reserve_seat(self, lib_id: int, seat_key: str):
@@ -233,7 +241,9 @@ class LibService:
             # 3. Check date (Ignore past reservations)
             # If the reservation date is strictly before today, it's a stale record.
             date_str = reserve_data.get('date')
-            if date_str and str(date_str).strip() != '':
+            if not date_str or str(date_str).strip() == '':
+                return None
+            else:
                 try:
                     res_date = datetime.strptime(str(date_str), "%Y-%m-%d").date()
                     today = datetime.now().date()
@@ -246,14 +256,13 @@ class LibService:
             # Note: Do not check expiration locally. Trust the server's status.
             # If status is active, the seat is ours even if local time > exp_date.
 
+            selection_status = 'reserved' if status == 1 else 'checked-in'
+            reserve_data['selection_status'] = selection_status
             return reserve_data
         except Exception as e:
             logger.error(f"get_reserve_info failed: {e}")
             return None
 
-    def has_current_reservation(self) -> bool:
-        info = self.get_reserve_info()
-        return bool(info)
     # --- Interactive Info ---
     def get_lib_list(self):
         payload = {

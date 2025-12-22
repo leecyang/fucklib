@@ -106,10 +106,10 @@ export const libApi = {
     getLibs: () => api.get<Lib[]>('/library/list'),
     getFloors: (libId: number) => api.get<Floor[]>(`/library/${libId}/floors`),
     getLayout: (libId: number) => api.get<any>(`/library/${libId}/layout`),
-    getReserveInfo: () => api.get<any>('/library/reserve'),
+    getReserveInfo: () => api.get<{ selection_status?: 'reserved'|'checked-in'; status?: number; lib_id?: number; seat_key?: string; seat_name?: string; token?: string; [k: string]: any } | null>('/library/reserve'),
     reserveSeat: (libId: number, seatKey: string) => api.post('/library/reserve', null, { params: { lib_id: libId, seat_key: seatKey } }),
     cancelReserve: () => api.delete('/library/reserve'),
-    getFrequentSeats: () => api.get<any[]>('/library/frequent-seats'),
+    getFrequentSeats: () => api.get<Array<{ lib_id: number; seat_key: string; info?: string; selection_status?: 'pre-selected'; [k: string]: any }>>('/library/frequent-seats'),
     getUserInfo: () => api.get<any>('/library/user_info'),
     signin: () => api.post<any>('/library/signin'),
 };
