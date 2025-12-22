@@ -25,6 +25,22 @@ def run_seat_task(user_id: int, task_id: int):
 
         service = LibService(user.wechat_config.cookie)
         
+        # Skip if user already has a seat today
+        try:
+            reserve = service.get_reserve_info()
+            if reserve:
+                # prefer getReserveInfo payload structure
+                date = reserve.get('date')
+                seat_key = reserve.get('seatKey') or reserve.get('seat_key')
+                if seat_key and (not date or str(date).strip() != ''):
+                    task.last_status = 'skipped'
+                    task.last_message = '用户当前已有预约，跳过任务'
+                    return
+            else:
+                logger.info("No current reserve info, continue seat task.")
+        except Exception as e:
+            logger.warning(f"Check current reserve failed: {e}")
+
         # Strategy: Custom or Default
         strategy = task.config.get('strategy', 'custom') # 'custom' or 'default_all'
         
@@ -53,6 +69,22 @@ def run_seat_task(user_id: int, task_id: int):
         attempt = 0
         
         for seat in target_seats:
+            # Check if target seat is free today
+            try:
+                layout = service.get_lib_layout(seat['lib_id'])
+                seats = layout.get('lib_layout', {}).get('seats', []) if layout else []
+                found = None
+                for st in seats:
+                    if st.get('key') == seat['seat_key']:
+                        found = st
+                        break
+                if found and found.get('status') != 1:
+                    logger.info(f"Seat {seat['seat_key']} in lib {seat['lib_id']} is occupied, skip.")
+                    continue
+            except Exception as e:
+                logger.warning(f"Check seat occupancy failed: {e}")
+                # If occupancy check fails, continue to attempt reservation rather than block
+                pass
             try:
                 if attempt % 2 == 0:
                     try:
@@ -76,7 +108,11 @@ def run_seat_task(user_id: int, task_id: int):
             task.last_status = 'success'
             task.last_message = '执行成功'
         else:
-            raise last_error or Exception("所有尝试均失败")
+            # If all seats were occupied or attempts failed
+            if last_error:
+                raise last_error
+            task.last_status = 'skipped'
+            task.last_message = '目标座位今日已被占用或无可用座位，跳过任务'
 
     except Exception as e:
         logger.error(f"Task {task_id} failed: {e}")
