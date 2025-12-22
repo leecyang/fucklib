@@ -1,0 +1,29 @@
+name: Deploy
+
+on:
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: fucklib-deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.4
+        with:
+          host: ${{ secrets.FUCKLIB_DEPLOY_HOST }}
+          username: ${{ secrets.FUCKLIB_DEPLOY_USER }}
+          port: ${{ secrets.FUCKLIB_DEPLOY_PORT }}
+          key: ${{ secrets.FUCKLIB_DEPLOY_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            cd /root/fucklib
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
+            docker compose up -d --build
