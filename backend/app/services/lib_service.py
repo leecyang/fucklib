@@ -129,6 +129,14 @@ class LibService:
             "variables": {"pos": "App-首页"}
         }
         data = self._post(payload)
+        
+        # DEBUG: Log raw userAuth data for troubleshooting ban status
+        user_auth_raw = (data.get('data') or {}).get('userAuth')
+        if user_auth_raw and 'user_deny' in user_auth_raw:
+             logger.info(f"DEBUG: Fetched user_deny info: {user_auth_raw['user_deny']}")
+        else:
+             logger.info("DEBUG: user_deny info not found in response")
+
         if 'errors' in data:
             raise Exception(data['errors'][0].get('message', 'Unknown API Error'))
         

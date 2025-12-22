@@ -26,8 +26,21 @@ api.interceptors.response.use(
     } else if (msg.includes('40005') || msg.includes('绑定学号')) {
       alert('请先在微信端绑定学号，并在设置中更新 Cookie');
     } else if (status === 403 || status === 500 || msg.includes('40001') || msg.includes('access denied') || msg.includes('临时限制')) {
-      if (msg.includes('异常预约') || detail.includes('异常预约') || (Array.isArray(error?.response?.data?.errors) && error.response.data.errors.some((e: any) => e.code === 1))) {
+      // Handle 500 errors that might contain JSON in detail (Flask behavior)
+      let isBan = false;
+      if (msg.includes('异常预约') || detail.includes('异常预约')) {
+          isBan = true;
+      } else if (Array.isArray(error?.response?.data?.errors)) {
+          isBan = error.response.data.errors.some((e: any) => e.code === 1);
+      } else if (typeof detail === 'string' && (detail.includes('异常预约') || detail.includes('"code": 1') || detail.includes("'code': 1"))) {
+          // Sometimes 500 error detail is a stringified Python list/dict
+          isBan = true;
+      }
+
+      if (isBan) {
           alert('您因尝试预约非法座位导致账号被封禁');
+          // Force refresh user info to show ban status in settings
+          libApi.getUserInfo().catch(console.error);
       } else if (status !== 500) {
           alert('会话受限或被拒绝，请刷新 Cookie / SessID 或稍后再试');
       }
