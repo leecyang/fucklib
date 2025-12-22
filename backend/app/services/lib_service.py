@@ -44,9 +44,9 @@ class LibService:
         self._init_cookie()
 
     def _init_cookie(self):
+        # Do not preset SERVERID to avoid hitting wrong backend node
         self.cookie = self.cookie + '; FROM_TYPE=weixin; v=5.5; Hm_lvt_7ecd21a13263a714793f376c18038a87=1713417820,1714277047,1714304621,1714376091; ' \
-                               'Hm_lpvt_7ecd21a13263a714793f376c18038a87=' + str(int(time.time() - 1)) + '; SERVERID=' + \
-                      random.choice(self.SERVERID) + '|' + str(int(time.time() - 1)) + '|1714376087'
+                               'Hm_lpvt_7ecd21a13263a714793f376c18038a87=' + str(int(time.time() - 1))
         self.headers['Cookie'] = self.cookie
         self.session.headers.update(self.headers)
 
@@ -204,9 +204,10 @@ class LibService:
         # API 9 (getReserveInfo) is unreliable when pre-selected seat is occupied by others
         # User instructed to rely on index API (API 8) and check if data.userAuth.reserve.reserve is null
         try:
+            # Use complete query structure to avoid schema issues
             index_payload = {
                 "operationName": "index",
-                "query": "query index { userAuth { reserve { reserve { status lib_id seat_key lib_name seat_name date } } } }",
+                "query": "query index { userAuth { reserve { reserve { token status user_id user_nick sch_name lib_id lib_name lib_floor seat_key seat_name date exp_date exp_date_str validate_date hold_date diff diff_str mark_source isRecordUser isChooseSeat isRecord mistakeNum openTime threshold daynum mistakeNum closeTime timerange forbidQrValid renewTimeNext forbidRenewTime forbidWechatCancle } getSToken } } }",
                 "variables": {}
             }
             r = self._post(index_payload)
