@@ -7,6 +7,11 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Skip global error handling if configured
+    if (error.config?.skipErrorHandler) {
+      return Promise.reject(error);
+    }
+
     const status = error?.response?.status;
     const detail = error?.response?.data?.detail || '';
     const msg = String(detail).toLowerCase();
@@ -16,6 +21,8 @@ api.interceptors.response.use(
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
+    } else if (msg.includes('40005') || msg.includes('绑定学号')) {
+      alert('请先在微信端绑定学号，并在设置中更新 Cookie');
     } else if (status === 403 || msg.includes('40001') || msg.includes('access denied') || msg.includes('临时限制')) {
       alert('会话受限或被拒绝，请刷新 Cookie / SessID 或稍后再试');
     }
@@ -76,9 +83,9 @@ export interface Seat {
 }
 
 export const adminApi = {
-    getUsers: () => api.get<User[]>('/admin/users'),
+    getUsers: (config?: any) => api.get<User[]>('/admin/users', config),
     deleteUser: (id: number) => api.delete(`/admin/users/${id}`),
-    getInvites: () => api.get<InviteCode[]>('/admin/invite-codes'),
+    getInvites: (config?: any) => api.get<InviteCode[]>('/admin/invite-codes', config),
     generateInvite: () => api.post<InviteCode>('/admin/invite-codes'),
 };
 

@@ -34,9 +34,10 @@ export default function Settings() {
         setUserInfo(null);
       }
       try {
-        const inv = await adminApi.getInvites();
+        // Try to fetch admin data, but skip global error handler (403 Forbidden)
+        const inv = await adminApi.getInvites({ skipErrorHandler: true });
         setInvites(inv.data || []);
-        const usr = await adminApi.getUsers();
+        const usr = await adminApi.getUsers({ skipErrorHandler: true });
         setUsers(usr.data || []);
       } catch (e) {
         setInvites([]);
