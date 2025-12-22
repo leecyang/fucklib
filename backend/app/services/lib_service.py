@@ -134,6 +134,15 @@ class LibService:
         
         # Safe access to data.get('data') which might be None
         user_auth = (data.get('data') or {}).get('userAuth')
+        
+        # Fallback: if userAuth is missing but we have errors, it might be a partial success or specific error state
+        if not user_auth and 'errors' in data:
+             logger.warning(f"User info fetch partial/failed: {data['errors']}")
+             # Even if userAuth is None, we might want to surface the error, but for get_user_info specifically,
+             # if we can't get the user object, we can't really do much.
+             # However, for ban detection, sometimes the error itself is the signal.
+             pass
+
         if not user_auth:
             raise Exception('Failed to get user info')
             
