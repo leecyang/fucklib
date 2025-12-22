@@ -210,9 +210,9 @@ const InteractiveReserve: React.FC = () => {
          
          {/* Status Indicators (Legend) */}
          <div className="flex gap-4 text-xs text-slate-500 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
-             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-300"></span>Available</div>
-             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse"></span>Mine</div>
-             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-200"></span>Taken</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-300"></span>可预约</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse"></span>我的</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-200"></span>不可用</div>
          </div>
       </div>
 
@@ -226,7 +226,7 @@ const InteractiveReserve: React.FC = () => {
                           <Clock className="w-6 h-6" />
                       </div>
                       <div>
-                          <h3 className="font-bold text-indigo-900">Active Reservation</h3>
+                          <h3 className="font-bold text-indigo-900">当前已有预约</h3>
                           <div className="text-indigo-700 text-sm mt-1 space-y-0.5">
                               {(() => {
                                 const libId = reserveInfo.lib_id || reserveInfo.libId;
@@ -234,12 +234,12 @@ const InteractiveReserve: React.FC = () => {
                                 const lib = libs.find(l => l.id === libId);
                                 const floor = lib ? (lib.name.split(' - ')[1] || lib.name) : libId;
                                 const seatName = reserveSeatName || (selectedLib === libId && Array.isArray(seats) ? (seats.find(s => s.key === seatKey)?.name || seatKey) : seatKey);
-                                const statusText = reserveInfo.status === 3 ? 'Seated' : 'Waiting for Sign-in';
+                                const statusText = reserveInfo.status === 3 ? '已入座' : '未签到';
                                 return (
                                   <>
-                                    <p className="flex items-center gap-2"><span className="opacity-70">Location:</span> <span className="font-medium">{floor}</span></p>
-                                    <p className="flex items-center gap-2"><span className="opacity-70">Seat:</span> <span className="font-mono font-bold bg-white/50 px-1.5 rounded">{seatName}</span></p>
-                                    <p className="flex items-center gap-2"><span className="opacity-70">Status:</span> <span className="font-medium">{statusText}</span></p>
+                                    <p className="flex items-center gap-2"><span className="opacity-70">位置：</span> <span className="font-medium">{floor}</span></p>
+                                    <p className="flex items-center gap-2"><span className="opacity-70">座位：</span> <span className="font-mono font-bold bg-white/50 px-1.5 rounded">{seatName}</span></p>
+                                    <p className="flex items-center gap-2"><span className="opacity-70">状态：</span> <span className="font-medium">{statusText}</span></p>
                                   </>
                                 )
                               })()}
@@ -247,7 +247,7 @@ const InteractiveReserve: React.FC = () => {
                       </div>
                   </div>
                   <button onClick={handleCancel} className="w-full md:w-auto px-6 py-2.5 bg-white text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-50 transition-colors font-medium shadow-sm flex items-center justify-center gap-2">
-                      <X className="w-4 h-4" /> Cancel
+                      <X className="w-4 h-4" /> 取消预约
                   </button>
               </div>
           )}
@@ -255,7 +255,7 @@ const InteractiveReserve: React.FC = () => {
           {/* Quick Reserve Frequent Seats */}
           {frequent && frequent.length > 0 && (
             <div className="mb-6">
-                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Frequent Seats</h4>
+                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">常用座位</h4>
                 <div className="flex flex-wrap gap-3">
                     {frequent.map((s) => (
                     <button
@@ -269,13 +269,13 @@ const InteractiveReserve: React.FC = () => {
                         )}
                         disabled={!frequentStatus[`${s.lib_id}:${s.seat_key}`]}
                     >
-                        <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 font-bold font-mono group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
-                            {s.info || s.seat_key}
+                        <span className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700 font-bold font-mono group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+                            {s.seat_key}
                         </span>
-                        <div className="flex flex-col items-start">
-                            <span className="font-medium text-slate-700">Quick Book</span>
+                        <div className="flex flex-col items-start min-w-0">
+                            <span className="font-medium text-slate-700 whitespace-nowrap truncate max-w-[8rem]">{s.info || '快捷预约'}</span>
                             <span className={cn("text-xs", frequentStatus[`${s.lib_id}:${s.seat_key}`] ? "text-emerald-600" : "text-rose-500")}>
-                                {frequentStatus[`${s.lib_id}:${s.seat_key}`] ? 'Available' : 'Taken'}
+                                {frequentStatus[`${s.lib_id}:${s.seat_key}`] ? '可预约' : '不可预约'}
                             </span>
                         </div>
                     </button>
@@ -288,7 +288,7 @@ const InteractiveReserve: React.FC = () => {
           {loading && (
               <div className="py-20 flex flex-col items-center justify-center text-slate-400">
                   <div className="w-10 h-10 border-4 border-slate-200 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
-                  <p>Loading layout...</p>
+                  <p>正在加载座位布局...</p>
               </div>
           )}
 
@@ -307,7 +307,7 @@ const InteractiveReserve: React.FC = () => {
           
           {!loading && seats && seats.length === 0 && !seatsError && (
              <div className="py-12 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                 No seats available to display
+                 暂无座位数据
              </div>
           )}
       </div>
@@ -321,7 +321,7 @@ const InteractiveReserve: React.FC = () => {
                   className="bg-slate-900 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all px-6 py-3 rounded-full flex items-center gap-2 font-medium"
                >
                    <Check className="w-5 h-5" />
-                   Book {selectedSeatName}
+                   预约 {selectedSeatName}
                </button>
            )}
 
@@ -338,7 +338,7 @@ const InteractiveReserve: React.FC = () => {
               className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg hover:shadow-indigo-200/50 hover:scale-105 transition-all px-6 py-3 rounded-full flex items-center gap-2 font-bold"
            >
               <Bluetooth className="w-5 h-5" />
-              Bluetooth Sign-in
+              蓝牙签到
            </button>
       </div>
     </div>

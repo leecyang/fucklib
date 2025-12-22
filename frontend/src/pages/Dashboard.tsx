@@ -76,8 +76,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500 mt-1">Welcome back, check your library status.</p>
+        <h1 className="text-3xl font-bold text-slate-900">首页概览</h1>
+        <p className="text-slate-500 mt-1">欢迎回来，查看你的图书馆预约与任务状态。</p>
       </header>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -98,7 +98,7 @@ export default function Dashboard() {
                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                     <div className="flex items-center gap-2 text-sm text-slate-600">
                         <School className="w-4 h-4" />
-                        <span>School</span>
+                        <span>学校</span>
                     </div>
                     <span className="font-medium text-slate-900 text-sm">{userInfo?.user_sch || '-'}</span>
                  </div>
@@ -112,11 +112,11 @@ export default function Dashboard() {
             </div>
             <div className={cn("px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1", config?.sess_id ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
                 {config?.sess_id ? <CheckCircle className="w-3 h-3"/> : <XCircle className="w-3 h-3"/>}
-                Session
+                签到授权
             </div>
             <div className={cn("px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1", config?.major && config?.minor ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500")}>
                 <Zap className="w-3 h-3"/>
-                Bluetooth
+                蓝牙配置
             </div>
           </div>
         </div>
@@ -127,7 +127,7 @@ export default function Dashboard() {
              
              <h2 className="text-lg font-semibold text-indigo-100 mb-4 flex items-center gap-2">
                 <MapPin className="w-5 h-5" />
-                Current Seat
+                当前座位
              </h2>
 
              {seatInfo && (Array.isArray(seatInfo) ? seatInfo.length > 0 : seatInfo) ? (
@@ -142,11 +142,22 @@ export default function Dashboard() {
                       
                       return (
                           <>
-                            <div className="text-4xl font-bold font-mono tracking-tight">{seatName}</div>
-                            <div className="text-indigo-200 font-medium">{floor}</div>
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full text-xs backdrop-blur-sm">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                Active
+                            <div className="flex items-end justify-between">
+                                <div className="text-4xl font-bold font-mono tracking-tight">{seatName}</div>
+                                <div className="px-2 py-1 rounded-full bg-white/20 text-xs text-indigo-100">楼层：{floor}</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div className="bg-white/10 rounded-lg px-3 py-2">
+                                    <div className="opacity-70">状态</div>
+                                    <div className="mt-1 inline-flex items-center gap-2 px-2 py-0.5 bg-white/20 rounded-full text-xs backdrop-blur-sm">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                        已预约
+                                    </div>
+                                </div>
+                                <div className="bg-white/10 rounded-lg px-3 py-2">
+                                    <div className="opacity-70">蓝牙</div>
+                                    <div className="mt-1">{config?.major && config?.minor ? '已配置' : '未配置'}</div>
+                                </div>
                             </div>
                           </>
                       )
@@ -154,9 +165,9 @@ export default function Dashboard() {
                 </div>
              ) : (
                 <div className="h-full flex flex-col justify-center items-center text-indigo-200 gap-3">
-                    <p>No active reservation</p>
+                    <p>暂无预约</p>
                     <Link to="/reserve" className="px-4 py-2 bg-white text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-50 transition-colors">
-                        Book Now
+                        立即预约
                     </Link>
                 </div>
              )}
@@ -166,7 +177,7 @@ export default function Dashboard() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 lg:col-span-1 flex flex-col">
             <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
                 <Clock className="w-5 h-5 text-indigo-600" />
-                Task Radar
+                任务雷达
             </h2>
             
             <div className="flex-1 space-y-4">
@@ -174,7 +185,7 @@ export default function Dashboard() {
                     <div key={t.id} className="space-y-2">
                         <div className="flex justify-between text-sm">
                             <span className="font-medium text-slate-700">
-                                {t.task_type === 'signin' ? 'Auto Sign-in' : 'Reservation'}
+                                {t.task_type === 'signin' ? '蓝牙签到' : '预约'}
                             </span>
                             <span className="font-mono text-xs text-slate-400">{t.cron_expression}</span>
                         </div>
@@ -182,25 +193,25 @@ export default function Dashboard() {
                         <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                             <div 
                                 className={cn("h-full rounded-full transition-all duration-1000", t.is_enabled ? "bg-indigo-500 w-3/4 animate-pulse" : "bg-slate-300 w-full")}
-                                style={{ width: t.is_enabled ? '75%' : '100%' }} // Static width for now as "radar"
+                                style={{ width: t.is_enabled ? '75%' : '100%' }}
                             ></div>
                         </div>
                         <div className="flex justify-between text-xs text-slate-400">
-                            <span>{t.is_enabled ? 'Active' : 'Paused'}</span>
+                            <span>{t.is_enabled ? '启用中' : '已暂停'}</span>
                             <span className={t.last_status === 'success' ? 'text-emerald-500' : 'text-slate-400'}>
-                                {t.last_status || 'Pending'}
+                                {t.last_status || '等待中'}
                             </span>
                         </div>
                     </div>
                 )) : (
                     <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
-                        No scheduled tasks
+                        暂无任务
                     </div>
                 )}
             </div>
             
             <Link to="/tasks" className="mt-4 text-center text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-                View All Tasks &rarr;
+                查看全部任务 →
             </Link>
         </div>
       </div>
