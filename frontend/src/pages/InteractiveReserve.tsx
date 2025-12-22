@@ -9,10 +9,12 @@ const InteractiveReserve: React.FC = () => {
   const [reserveInfo, setReserveInfo] = useState<any>(null);
   const [libsError, setLibsError] = useState<string | null>(null);
   const [seatsError, setSeatsError] = useState<string | null>(null);
+  const [frequent, setFrequent] = useState<any[]>([]);
 
   useEffect(() => {
     fetchLibs();
     fetchReserveInfo();
+    fetchFrequent();
   }, []);
 
   const fetchLibs = async () => {
@@ -38,6 +40,15 @@ const InteractiveReserve: React.FC = () => {
       } catch (err) {
           console.error(err);
       }
+  }
+  
+  const fetchFrequent = async () => {
+    try {
+      const res = await libApi.getFrequentSeats();
+      setFrequent(Array.isArray(res.data) ? res.data.slice(0, 2) : []);
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   const handleLibChange = async (libId: number) => {
@@ -91,17 +102,22 @@ const InteractiveReserve: React.FC = () => {
       return (
           <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-2">
               {seatList.map(seat => {
-                  const isFree = seat.status === 1; // Assuming 1 is free
+                  const isFree = seat.status === 1;
+                  const isMine = reserveInfo && (reserveInfo.seat_key ? reserveInfo.seat_key === seat.key : reserveInfo?.seatKey === seat.key);
+                  const statusCode = reserveInfo?.status;
+                  const isSeated = statusCode === 3;
+                  const isNotSigned = isMine && !isSeated;
                   return (
                     <div 
                         key={seat.key} 
                         className={`
                             p-2 text-center border rounded text-sm transition-colors
-                            ${isFree 
-                                ? 'bg-green-100 hover:bg-green-200 border-green-300 cursor-pointer text-green-800' 
-                                : 'bg-red-50 border-red-200 text-gray-400 cursor-not-allowed'}
+                            ${isMine && isSeated ? 'bg-blue-200 border-blue-400 text-blue-900'
+                              : isNotSigned ? 'bg-green-200 border-green-400 text-green-900'
+                              : isFree ? 'bg-white hover:bg-gray-50 border-gray-300 cursor-pointer text-gray-800'
+                              : 'bg-red-50 border-red-200 text-gray-400'}
                         `}
-                        onClick={() => isFree && handleReserve(seat.key)}
+                        onClick={() => isFree && !isMine && handleReserve(seat.key)}
                         title={`Status: ${seat.status}, Type: ${seat.type}`}
                     >
                         {seat.name}
@@ -122,8 +138,8 @@ const InteractiveReserve: React.FC = () => {
               <div>
                   <h3 className="font-bold text-blue-800">当前已有预约</h3>
                   <div className="text-blue-600 text-sm mt-1">
-                      <p>座位号: <span className="font-mono font-bold">{reserveInfo.seatKey}</span></p>
-                      <p>Lib ID: {reserveInfo.libId}</p>
+                      <p>座位号: <span className="font-mono font-bold">{reserveInfo.seat_key || reserveInfo.seatKey}</span></p>
+                      <p>Lib ID: {reserveInfo.lib_id || reserveInfo.libId}</p>
                       <p>状态码: {reserveInfo.status}</p>
                   </div>
               </div>
@@ -167,6 +183,44 @@ const InteractiveReserve: React.FC = () => {
       {!loading && seats && seats.length === 0 && (
         <div className="text-center py-6 text-gray-500">暂无座位数据</div>
       )}
+      
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <h4 className="font-bold mb-4 text-gray-700 flex items-center gap-2">
+          <span className="w-2 h-6 bg-green-500 rounded-full"></span>
+          常用座位快捷预约
+        </h4>
+        {frequent && frequent.length > 0 ? (
+          <div className="flex gap-2">
+            {frequent.map((s) => (
+              <button
+                key={s.seat_key}
+                onClick={() => handleReserve(s.seat_key)}
+                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded border text-sm"
+                title={`Lib: ${s.lib_id}`}
+              >
+                {s.info || s.seat_key}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="text-gray-500 text-sm">未配置常用座位或无法获取</div>
+        )}
+        <div className="mt-4">
+          <button
+            onClick={async () => {
+              try {
+                const res = await libApi.signin();
+                alert(res.data?.message || '已发起签到');
+              } catch (err: any) {
+                alert('签到失败: ' + (err.response?.data?.detail || err.message));
+              }
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow"
+          >
+            蓝牙签到
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

@@ -41,13 +41,6 @@ export default function Layout() {
             定时任务
           </Link>
           <Link
-            to="/admin"
-            className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-          >
-            <Shield className="w-5 h-5" />
-            管理后台
-          </Link>
-          <Link
             to="/settings"
             className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
           >

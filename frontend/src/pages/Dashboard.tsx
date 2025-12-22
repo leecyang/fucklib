@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import api, { libApi } from '../api/client';
+import api, { libApi, taskApi, type Task } from '../api/client';
 
 export default function Dashboard() {
   const [config, setConfig] = useState<any>(null);
   const [seatInfo, setSeatInfo] = useState<any>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -15,6 +16,12 @@ export default function Dashboard() {
     try {
       const configRes = await api.get('/library/config');
       setConfig(configRes.data);
+      try {
+        const resTasks = await taskApi.getTasks();
+        setTasks(resTasks.data || []);
+      } catch (e) {
+        console.error('任务列表获取失败', e);
+      }
       
       if (configRes.data.cookie) {
         const seatRes = await api.get('/library/seat_info');
@@ -89,6 +96,12 @@ export default function Dashboard() {
                 {config?.sess_id ? "已配置" : "未配置"}
               </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">蓝牙配置 (Major/Minor)：</span>
+              <span className={config?.major && config?.minor ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
+                {config?.major && config?.minor ? `${config.major} / ${config.minor}` : "未配置"}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -116,6 +129,24 @@ export default function Dashboard() {
               未获取到常用座位信息，请先在「我去图书馆」公众号中设置常用座位，
               并在本系统设置页面更新微信 Cookie 后再查看。
             </p>
+          )}
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4">定时任务概览</h2>
+          {tasks && tasks.length > 0 ? (
+            <div className="space-y-3">
+              {tasks.slice(0, 5).map((t) => (
+                <div key={t.id} className="flex justify-between text-sm border-b pb-1 last:border-b-0">
+                  <span className="font-mono">{t.task_type}</span>
+                  <span className={t.last_status === 'success' ? 'text-green-600' : 'text-gray-500'}>
+                    {t.last_status || '-'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500">暂无任务，前往“定时任务”页面创建</p>
           )}
         </div>
       </div>

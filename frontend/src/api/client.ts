@@ -4,6 +4,18 @@ const api = axios.create({
   baseURL: '/api',
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const detail = error?.response?.data?.detail || '';
+    const msg = String(detail).toLowerCase();
+    if (status === 403 || msg.includes('40001') || msg.includes('access denied') || msg.includes('临时限制')) {
+      alert('会话受限或被拒绝，请刷新 Cookie / SessID 或稍后再试');
+    }
+    return Promise.reject(error);
+  }
+);
 api.interceptors.request.use((config: any) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -80,6 +92,7 @@ export const libApi = {
     cancelReserve: () => api.delete('/library/reserve'),
     getFrequentSeats: () => api.get<any[]>('/library/frequent-seats'),
     getUserInfo: () => api.get<any>('/library/user_info'),
+    signin: () => api.post<any>('/library/signin'),
 };
 
 export default api;

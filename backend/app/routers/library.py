@@ -121,3 +121,25 @@ def get_cookie_from_url(
         return {"message": "Success", "cookie": cookie_str}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/signin")
+def signin(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    try:
+        config = crud.get_wechat_config(db, current_user.id)
+        if not config or not config.sess_id:
+            raise HTTPException(status_code=400, detail="请先在设置中绑定签到授权链接")
+        # 前置只读热身（若绑定了 Cookie）
+        if config.cookie:
+            try:
+                LibService(config.cookie).refresh_page()
+            except Exception:
+                pass
+        res = AuthService.sign_in(config.sess_id, config.major, config.minor)
+        return {"message": res}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

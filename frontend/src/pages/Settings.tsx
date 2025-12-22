@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api, { libApi } from '../api/client';
+import api, { libApi, adminApi } from '../api/client';
 
 export default function Settings() {
   const [config, setConfig] = useState<any>({ major: '', minor: '' });
@@ -7,6 +7,8 @@ export default function Settings() {
   const [sessUrl, setSessUrl] = useState('');
   const [msg, setMsg] = useState('');
   const [userInfo, setUserInfo] = useState<any>(null);
+  const [invites, setInvites] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
     loadConfig();
@@ -26,6 +28,15 @@ export default function Settings() {
         }
       } else {
         setUserInfo(null);
+      }
+      try {
+        const inv = await adminApi.getInvites();
+        setInvites(inv.data || []);
+        const usr = await adminApi.getUsers();
+        setUsers(usr.data || []);
+      } catch (e) {
+        setInvites([]);
+        setUsers([]);
       }
     } catch (err) {
       console.error(err);
@@ -151,6 +162,57 @@ export default function Settings() {
         </div>
       </div>
 
+      <div className="bg-white p-6 rounded-lg shadow-md space-y-4">
+        <h2 className="text-xl font-semibold">管理员设置中心</h2>
+        {invites.length === 0 && users.length === 0 ? (
+          <p className="text-gray-500 text-sm">非管理员或暂无权限</p>
+        ) : (
+          <>
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-semibold">邀请码管理</h3>
+                <button
+                  onClick={async () => {
+                    try {
+                      await adminApi.generateInvite();
+                      const inv = await adminApi.getInvites();
+                      setInvites(inv.data || []);
+                    } catch (e) {
+                      alert('生成邀请码失败');
+                    }
+                  }}
+                  className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  生成邀请码
+                </button>
+              </div>
+              <ul className="text-sm space-y-1">
+                {invites.map((i) => (
+                  <li key={i.id} className="flex justify-between border-b pb-1 last:border-b-0">
+                    <span className="font-mono">{i.code}</span>
+                    <span className={i.is_used ? 'text-gray-500' : 'text-green-600'}>
+                      {i.is_used ? '已使用' : '未使用'}
+                    </span>
+                  </li>
+                ))}
+                {invites.length === 0 && <li className="text-gray-500">暂无邀请码</li>}
+              </ul>
+            </div>
+            <div className="pt-4 border-t">
+              <h3 className="font-semibold mb-2">用户管理</h3>
+              <ul className="text-sm space-y-1">
+                {users.map((u) => (
+                  <li key={u.id} className="flex justify-between border-b pb-1 last:border-b-0">
+                    <span>{u.username}</span>
+                    <span className="text-gray-500">{u.is_admin ? '管理员' : '普通用户'}</span>
+                  </li>
+                ))}
+                {users.length === 0 && <li className="text-gray-500">暂无用户或无权限查看</li>}
+              </ul>
+            </div>
+          </>
+        )}
+      </div>
       <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
         <h2 className="text-xl font-semibold">蓝牙打卡配置（Major / Minor）</h2>
         <div className="grid grid-cols-2 gap-4">
