@@ -241,7 +241,7 @@ const InteractiveReserve: React.FC = () => {
                     disabled={loading}
                  >
                      <option value="">Select Library & Floor...</option>
-                    {libs.map((l: Lib) => <option key={l.id} value={l.id}>{l.name} {checkLibOpen(l) ? '' : '(Closed)'}</option>)}
+                    {libs.map((l: Lib) => <option key={l.id} value={l.id}>{l.name} {checkLibOpen(l) ? '' : '(已关闭)'}</option>)}
                  </select>
              </div>
              {libsError && <div className="text-rose-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {libsError}</div>}
