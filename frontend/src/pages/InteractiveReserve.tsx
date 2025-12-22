@@ -222,9 +222,7 @@ const InteractiveReserve: React.FC = () => {
                         )}
                     </div>
               })}
-          </div>
-      )
-  }
+ 
           </div>
       )
   }
