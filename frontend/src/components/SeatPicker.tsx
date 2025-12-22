@@ -76,7 +76,7 @@ const SeatPicker: React.FC<SeatPickerProps> = ({ onClose, onPick }) => {
           {!loading && seats.length > 0 && (
             <div className="grid grid-cols-5 sm:grid-cols-8 xl:grid-cols-10 gap-2">
               {seats.map(seat => {
-                const isFree = seat.status === 1;
+                const isFree = (seat as any).seat_status === 1 || seat.status === 1;
                 return (
                   <button
                     key={seat.key}

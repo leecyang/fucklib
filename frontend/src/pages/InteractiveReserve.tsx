@@ -78,7 +78,7 @@ const InteractiveReserve: React.FC = () => {
           const layout = await libApi.getLayout(s.lib_id);
           const seatList = layout.data?.lib_layout?.seats || [];
           const found = seatList.find((st: any) => st.key === s.seat_key);
-          statusMap[`${s.lib_id}:${s.seat_key}`] = found ? found.status === 1 : false;
+          statusMap[`${s.lib_id}:${s.seat_key}`] = found ? (found.seat_status === 1 || found.status === 1) : false;
           if (found?.name) nameMap[`${s.lib_id}:${s.seat_key}`] = found.name;
         } catch (e) {
           statusMap[`${s.lib_id}:${s.seat_key}`] = false;
@@ -155,7 +155,7 @@ const InteractiveReserve: React.FC = () => {
       return (
           <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3">
               {seatList.map(seat => {
-                  const isFree = seat.status === 1;
+                  const isFree = (seat as any).seat_status === 1 || seat.status === 1;
                   const isMine = reserveInfo && (reserveInfo.seat_key ? reserveInfo.seat_key === seat.key : reserveInfo?.seatKey === seat.key);
                   const isSelected = selectedSeatKey === seat.key;
 
@@ -179,7 +179,7 @@ const InteractiveReserve: React.FC = () => {
                             setSelectedSeatName(seat.name);
                           }
                         }}
-                        title={`${seat.name} (${seat.status === 1 ? 'Available' : 'Unavailable'})`}
+                        title={`${seat.name} (${((seat as any).seat_status === 1 || seat.status === 1) ? 'Available' : 'Unavailable'})`}
                     >
                         {seat.name}
                         {isMine && (
