@@ -17,6 +17,7 @@ api.interceptors.response.use(
     const detail = error?.response?.data?.detail || '';
     const msg = String(detail).toLowerCase();
     const detailStr = String(detail);
+    const reqUrl = String(error?.config?.url || '');
     
     if (status === 401) {
       localStorage.removeItem('token');
@@ -27,6 +28,17 @@ api.interceptors.response.use(
       alert('无法解析学号，请前往公众号检查是否已登录“我去图书馆”小程序', '绑定失败');
     } else if (msg.includes('40005') || msg.includes('绑定学号')) {
       alert('请先在微信端绑定学号，并在设置中更新 Cookie', '需要绑定学号');
+    } else if (
+      reqUrl.includes('/library/reserve') &&
+      (
+        detailStr.includes('临时限制预约用户') ||
+        detailStr.includes('异常预约') ||
+        (Array.isArray(error?.response?.data?.errors) && error.response.data.errors.some((e: any) => e.code === 1)) ||
+        detailStr.includes('"code": 1') ||
+        detailStr.includes("'code': 1")
+      )
+    ) {
+      alert('您的账号当前被限制预约，请在设置页查看解除时间或稍后再试', '限制预约');
     } else if (
       detailStr.includes('预约限制') ||
       detailStr.includes('被限制预约') ||
