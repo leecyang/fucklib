@@ -54,7 +54,7 @@ api.interceptors.response.use(
           if (detailStr.includes('Reserve Failed') || detailStr.includes('Fatal Reverse') || detailStr.includes('系统未确认座位')) {
               displayMsg = '预约失败：系统未确认座位，请稍后重试。这通常是因为座位已被他人抢占。';
               title = '预约失败';
-          } else if (detailStr.includes('临时限制') || detailStr.includes('access denied')) {
+          } else if (detailStr.includes('临时限制') || detailStr.includes('access denied') || detailStr.includes('异常预约')) {
               displayMsg = '您的账号当前被限制预约，请稍后再试或检查违规记录。';
               title = '限制预约';
           } else if (detailStr.includes('Prereserve Failed')) {

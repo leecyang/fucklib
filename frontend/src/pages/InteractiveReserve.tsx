@@ -437,11 +437,19 @@ const InteractiveReserve: React.FC = () => {
            {/* Bluetooth Sign-in FAB (Always visible) */}
            <button
               onClick={async () => {
+                // Pre-check: if no reservation, warn user
+                if (!reserveInfo || (!reserveInfo.seat_key && !reserveInfo.seatKey)) {
+                    await customAlert('请您先预约座位再进行蓝牙签到', '无有效预约');
+                    return;
+                }
+                
                 try {
                   const res = await libApi.signin();
-                  alert(res.data?.message || '已发起签到');
+                  await customAlert(res.data?.message || '已发起签到', '签到结果');
                 } catch (err: any) {
-                  alert('签到失败: ' + (err.response?.data?.detail || err.message));
+                  // Errors are handled by interceptor, but if we need custom handling:
+                  // The interceptor handles alerts, so we don't need to double alert unless it's specific logic.
+                  // For now, let interceptor handle errors.
                 }
               }}
               className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg hover:shadow-indigo-200/50 hover:scale-105 transition-all px-6 py-3 rounded-full flex items-center gap-2 font-bold"
