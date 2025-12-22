@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import api, { libApi, adminApi } from '../api/client';
 import { cn } from '../lib/utils';
-import { Shield, Smartphone, Link as LinkIcon, AlertTriangle, User, Ticket, Save, RefreshCw, QrCode } from 'lucide-react';
+import { Shield, Smartphone, Link as LinkIcon, User, Ticket, Save, RefreshCw, QrCode, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
   const [config, setConfig] = useState<any>({ major: '', minor: '' });
   const [authUrl, setAuthUrl] = useState('');
   const [sessUrl, setSessUrl] = useState('');
-  const [msg, setMsg] = useState('');
+  const [dialog, setDialog] = useState<{ title: string; body: string; variant: 'success' | 'error' | 'info' } | null>(null);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [invites, setInvites] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -52,10 +52,10 @@ export default function Settings() {
       await api.post('/library/get_cookie_from_url', null, {
         params: { url, is_auth_url: isAuth }
       });
-      setMsg('链接解析成功，配置已更新');
+      setDialog({ title: '解析成功', body: '链接解析成功，配置已更新', variant: 'success' });
       loadConfig();
     } catch (err: any) {
-      setMsg('错误：' + (err.response?.data?.detail || '解析链接失败，请稍后重试'));
+      setDialog({ title: '解析失败', body: err.response?.data?.detail || '解析链接失败，请稍后重试', variant: 'error' });
     }
   };
 
@@ -65,9 +65,9 @@ export default function Settings() {
         major: config.major,
         minor: config.minor
       });
-      setMsg('蓝牙配置已保存');
+      setDialog({ title: '保存成功', body: '蓝牙配置已保存', variant: 'success' });
     } catch (err: any) {
-      setMsg('错误：' + (err.response?.data?.detail || '保存蓝牙配置失败，请稍后重试'));
+      setDialog({ title: '保存失败', body: err.response?.data?.detail || '保存蓝牙配置失败，请稍后重试', variant: 'error' });
     }
   };
 
@@ -78,10 +78,25 @@ export default function Settings() {
           <p className="text-slate-500 mt-1">配置账户与图书馆相关偏好。</p>
       </header>
       
-      {msg && (
-        <div className="bg-indigo-50 border border-indigo-100 text-indigo-700 p-4 rounded-xl flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <div>{msg}</div>
+      {/* Dialog Modal */}
+      {dialog && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-slate-100">
+            <div className="flex items-center gap-2 mb-2">
+              {dialog.variant === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+              {dialog.variant === 'error' && <AlertCircle className="w-5 h-5 text-rose-600" />}
+              <h3 className="text-lg font-bold text-slate-900">{dialog.title}</h3>
+            </div>
+            <p className="text-sm text-slate-600">{dialog.body}</p>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setDialog(null)}
+                className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+              >
+                知道了
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

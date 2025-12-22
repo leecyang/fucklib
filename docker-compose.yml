@@ -8,7 +8,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: mysql+pymysql://fucklib:050426@mysql_2l4p-mysql_2L4p-1:3306/fucklib
+      DATABASE_URL: mysql+pymysql://fucklib:050426@mysql_fucklib-mysql_fucklib-1:3306/fucklib
     networks:
       - baota_net
 
