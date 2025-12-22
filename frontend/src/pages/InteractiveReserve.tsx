@@ -10,6 +10,7 @@ const InteractiveReserve: React.FC = () => {
   const [libsError, setLibsError] = useState<string | null>(null);
   const [seatsError, setSeatsError] = useState<string | null>(null);
   const [frequent, setFrequent] = useState<any[]>([]);
+  const [frequentStatus, setFrequentStatus] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchLibs();
@@ -45,7 +46,20 @@ const InteractiveReserve: React.FC = () => {
   const fetchFrequent = async () => {
     try {
       const res = await libApi.getFrequentSeats();
-      setFrequent(Array.isArray(res.data) ? res.data.slice(0, 2) : []);
+      const list = Array.isArray(res.data) ? res.data.slice(0, 2) : [];
+      setFrequent(list);
+      const statusMap: Record<string, boolean> = {};
+      for (const s of list) {
+        try {
+          const layout = await libApi.getLayout(s.lib_id);
+          const seatList = layout.data?.lib_layout?.seats || [];
+          const found = seatList.find((st: any) => st.key === s.seat_key);
+          statusMap[`${s.lib_id}:${s.seat_key}`] = found ? found.status === 1 : false;
+        } catch (e) {
+          statusMap[`${s.lib_id}:${s.seat_key}`] = false;
+        }
+      }
+      setFrequentStatus(statusMap);
     } catch (e) {
       console.error(e);
     }
@@ -130,7 +144,7 @@ const InteractiveReserve: React.FC = () => {
 
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">交互式预约</h1>
+      <h1 className="text-2xl font-bold text-gray-800">预约</h1>
       
       {/* Reserve Info Card */}
       {reserveInfo && (
@@ -138,9 +152,30 @@ const InteractiveReserve: React.FC = () => {
               <div>
                   <h3 className="font-bold text-blue-800">当前已有预约</h3>
                   <div className="text-blue-600 text-sm mt-1">
-                      <p>座位号: <span className="font-mono font-bold">{reserveInfo.seat_key || reserveInfo.seatKey}</span></p>
-                      <p>Lib ID: {reserveInfo.lib_id || reserveInfo.libId}</p>
-                      <p>状态码: {reserveInfo.status}</p>
+                      {(() => {
+                        const libId = reserveInfo.lib_id || reserveInfo.libId;
+                        const seatKey = reserveInfo.seat_key || reserveInfo.seatKey;
+                        const lib = libs.find(l => l.id === libId);
+                        const floor = lib ? (lib.name.split(' - ')[1] || lib.name) : libId;
+                        const fetchSeatFromLayout = (sid: number, skey: string): { name?: string, status?: number } => {
+                          // Prefer current seats if same lib
+                          if (selectedLib === sid && Array.isArray(seats)) {
+                            const found = seats.find(s => s.key === skey);
+                            if (found) return { name: found.name, status: found.status };
+                          }
+                          return {};
+                        };
+                        const info = fetchSeatFromLayout(libId, seatKey);
+                        const seatName = info.name || seatKey;
+                        const statusText = reserveInfo.status === 3 ? '已入座' : '未签到';
+                        return (
+                          <>
+                            <p>楼层: <span className="font-bold">{floor}</span></p>
+                            <p>座位: <span className="font-mono font-bold">{seatName}</span></p>
+                            <p>状态: {statusText}</p>
+                          </>
+                        )
+                      })()}
                   </div>
               </div>
               <button onClick={handleCancel} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors shadow">
@@ -195,10 +230,14 @@ const InteractiveReserve: React.FC = () => {
               <button
                 key={s.seat_key}
                 onClick={() => handleReserve(s.seat_key)}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded border text-sm"
+                className={`px-3 py-2 rounded border text-sm ${frequentStatus[`${s.lib_id}:${s.seat_key}`] ? 'bg-white hover:bg-gray-50' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}`}
                 title={`Lib: ${s.lib_id}`}
+                disabled={!frequentStatus[`${s.lib_id}:${s.seat_key}`]}
               >
-                {s.info || s.seat_key}
+                <span className="mr-2">{s.info || s.seat_key}</span>
+                <span className={`text-xs ${frequentStatus[`${s.lib_id}:${s.seat_key}`] ? 'text-green-600' : 'text-red-600'}`}>
+                  {frequentStatus[`${s.lib_id}:${s.seat_key}`] ? '可预约' : '不可预约'}
+                </span>
               </button>
             ))}
           </div>

@@ -59,10 +59,8 @@ def run_seat_task(user_id: int, task_id: int):
                         service.refresh_page()
                     except Exception:
                         pass
-                if task.task_type == 'seat_today':
+                if task.task_type == 'reserve':
                     service.reserve_seat(seat['lib_id'], seat['seat_key'])
-                elif task.task_type == 'seat_tomorrow':
-                    service.prereserve_seat(seat['lib_id'], seat['seat_key'])
                 success = True
                 break # Stop if success
             except Exception as e:
@@ -133,7 +131,7 @@ def add_task_job(task: models.Task):
         return
 
     func = None
-    if task.task_type in ['seat_today', 'seat_tomorrow']:
+    if task.task_type == 'reserve':
         func = run_seat_task
     elif task.task_type == 'signin':
         func = run_signin_task
@@ -165,6 +163,10 @@ def start_scheduler():
     try:
         tasks = db.query(models.Task).filter(models.Task.is_enabled == True).all()
         for task in tasks:
+            # Normalize legacy types
+            if task.task_type in ['seat_today', 'seat_tomorrow']:
+                task.task_type = 'reserve'
+                db.commit()
             add_task_job(task)
     except Exception as e:
         logger.error(f"Failed to load tasks: {e}")

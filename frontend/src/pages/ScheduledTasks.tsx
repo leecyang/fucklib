@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { taskApi, type Task } from '../api/client';
+import SeatPicker from '../components/SeatPicker';
 
 const ScheduledTasks: React.FC = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [showModal, setShowModal] = useState(false);
+    const [showSeatPicker, setShowSeatPicker] = useState(false);
     
     // Form State
-    const [type, setType] = useState('seat_today'); // seat_today, seat_tomorrow, signin
+    const [type, setType] = useState('reserve'); // reserve, signin
     const [time, setTime] = useState('08:00');
     const [strategy, setStrategy] = useState('default_all'); // default_all, custom
     const [libId, setLibId] = useState('');
     const [seatKey, setSeatKey] = useState('');
+    const [pickedSeat, setPickedSeat] = useState<{ libId: number, libName: string, seatKey: string, seatName: string } | null>(null);
     
     useEffect(() => {
         fetchTasks();
@@ -64,7 +67,7 @@ const ScheduledTasks: React.FC = () => {
             config: {}
         };
         
-        if (type.startsWith('seat')) {
+        if (type === 'reserve') {
             payload.config.strategy = strategy;
             if (strategy === 'custom') {
                 payload.config.lib_id = Number(libId);
@@ -104,16 +107,15 @@ const ScheduledTasks: React.FC = () => {
                         </button>
                         <h3 className="font-bold text-lg mb-2">
                             {task.task_type === 'signin' && '✨ 自动签到'}
-                            {task.task_type === 'seat_today' && '🪑 今日预约'}
-                            {task.task_type === 'seat_tomorrow' && '🌙 明日抢座'}
+                            {task.task_type === 'reserve' && '🪑 预约'}
                         </h3>
                         <p className="text-gray-600 mb-2">
                             时间: <span className="font-mono font-bold bg-gray-100 px-1 rounded">{formatCron(task.cron_expression)}</span>
                         </p>
                         
-                        {task.task_type.startsWith('seat') && (
+                        {task.task_type === 'reserve' && (
                             <div className="text-sm text-gray-500 mb-2">
-                                策略: {task.config.strategy === 'default_all' ? '尝试所有预选座位' : `指定座位 (${task.config.lib_id}, ${task.config.seat_key})`}
+                                策略: {task.config.strategy === 'default_all' ? '尝试所有常用座位' : `指定座位`}
                             </div>
                         )}
                         
@@ -151,8 +153,7 @@ const ScheduledTasks: React.FC = () => {
                                     value={type}
                                     onChange={e => setType(e.target.value)}
                                 >
-                                    <option value="seat_today">今日预约 (Reserve)</option>
-                                    <option value="seat_tomorrow">明日抢座 (Pre-reserve)</option>
+                                    <option value="reserve">预约</option>
                                     <option value="signin">蓝牙签到</option>
                                 </select>
                             </div>
@@ -168,7 +169,7 @@ const ScheduledTasks: React.FC = () => {
                                 />
                             </div>
                             
-                            {type.startsWith('seat') && (
+                            {type === 'reserve' && (
                                 <div className="space-y-4 border-t pt-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">选座策略</label>
@@ -180,7 +181,7 @@ const ScheduledTasks: React.FC = () => {
                                                     onChange={() => setStrategy('default_all')}
                                                     className="text-blue-600 focus:ring-blue-500"
                                                 />
-                                                <span>尝试所有预选座位 (推荐)</span>
+                                                <span>尝试所有常用座位 (推荐)</span>
                                             </label>
                                             <label className="flex items-center space-x-2 cursor-pointer">
                                                 <input 
@@ -195,24 +196,19 @@ const ScheduledTasks: React.FC = () => {
                                     </div>
                                     
                                     {strategy === 'custom' && (
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <input 
-                                                placeholder="Lib ID" 
-                                                className="border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                                                value={libId}
-                                                onChange={e => setLibId(e.target.value)}
-                                                required
-                                            />
-                                            <input 
-                                                placeholder="Seat Key" 
-                                                className="border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                                                value={seatKey}
-                                                onChange={e => setSeatKey(e.target.value)}
-                                                required
-                                            />
-                                            <p className="text-xs text-gray-500 col-span-2">
-                                                提示：请在“交互式预约”页面查看 Lib ID 和 Seat Key
-                                            </p>
+                                        <div className="space-y-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowSeatPicker(true)}
+                                                className="w-full border px-3 py-2 rounded hover:bg-gray-50"
+                                            >
+                                                选择座位
+                                            </button>
+                                            {pickedSeat && (
+                                                <div className="text-xs text-gray-600">
+                                                    已选择：{pickedSeat.libName} - {pickedSeat.seatName}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -236,6 +232,17 @@ const ScheduledTasks: React.FC = () => {
                         </form>
                     </div>
                 </div>
+            )}
+            {showSeatPicker && (
+                <SeatPicker
+                    onClose={() => setShowSeatPicker(false)}
+                    onPick={(data) => {
+                        setPickedSeat(data);
+                        setLibId(String(data.libId));
+                        setSeatKey(data.seatKey);
+                        setShowSeatPicker(false);
+                    }}
+                />
             )}
         </div>
     );
