@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { libApi, type Lib, type Seat } from '../api/client';
+import { cn } from '../lib/utils';
+import { MapPin, Bluetooth, Check, X, Clock, AlertCircle } from 'lucide-react';
 
 const InteractiveReserve: React.FC = () => {
+  // ==================================================================================
+  // BUSINESS LOGIC START - DO NOT MODIFY WITHOUT VERIFICATION
+  // ==================================================================================
   const [libs, setLibs] = useState<Lib[]>([]);
   const [selectedLib, setSelectedLib] = useState<number | null>(null);
   const [seats, setSeats] = useState<Seat[] | null>(null);
@@ -138,10 +143,13 @@ const InteractiveReserve: React.FC = () => {
           alert('取消失败: ' + (err.response?.data?.detail || err.message));
       }
   }
+  // ==================================================================================
+  // BUSINESS LOGIC END
+  // ==================================================================================
 
   const renderSeats = (seatList: Seat[]) => {
       return (
-          <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-2">
+          <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3">
               {seatList.map(seat => {
                   const isFree = seat.status === 1;
                   const isMine = reserveInfo && (reserveInfo.seat_key ? reserveInfo.seat_key === seat.key : reserveInfo?.seatKey === seat.key);
@@ -149,26 +157,33 @@ const InteractiveReserve: React.FC = () => {
                   const isSeated = statusCode === 3;
                   const isNotSigned = isMine && !isSeated;
                   const isSelected = selectedSeatKey === seat.key;
+
+                  // Modern Visual Map Logic
                   return (
                     <div 
                         key={seat.key} 
-                        className={`
-                            p-2 text-center border rounded text-sm transition-colors
-                            ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-400 text-blue-900'
-                              : isMine && isSeated ? 'bg-blue-200 border-blue-400 text-blue-900'
-                              : isNotSigned ? 'bg-green-200 border-green-400 text-green-900'
-                              : isFree ? 'bg-white hover:bg-gray-50 border-gray-300 cursor-pointer text-gray-800'
-                              : 'bg-red-50 border-red-200 text-gray-400'}
-                        `}
+                        className={cn(
+                            "relative aspect-square flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shadow-sm",
+                            isMine 
+                                ? "bg-indigo-600 text-white animate-pulse shadow-indigo-200 ring-2 ring-indigo-200" 
+                                : isSelected 
+                                    ? "bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500 z-10 scale-110 shadow-md"
+                                    : isFree 
+                                        ? "bg-white border border-slate-200 text-slate-600 hover:border-indigo-400 hover:shadow-md hover:-translate-y-0.5" 
+                                        : "bg-slate-100 text-slate-300 border border-transparent cursor-not-allowed"
+                        )}
                         onClick={() => {
-                          if (!isMine) {
+                          if (!isMine && isFree) {
                             setSelectedSeatKey(seat.key);
                             setSelectedSeatName(seat.name);
                           }
                         }}
-                        title={`状态: ${seat.status === 1 ? '可预约' : '不可预约'}`}
+                        title={`${seat.name} (${seat.status === 1 ? 'Available' : 'Unavailable'})`}
                     >
                         {seat.name}
+                        {isMine && (
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white"></div>
+                        )}
                     </div>
                   )
               })}
@@ -177,129 +192,157 @@ const InteractiveReserve: React.FC = () => {
   }
 
   return (
-    <div className="p-4 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">预约</h1>
-      
-      {/* Reserve Info Card */}
-      {reserveInfo && (
-          <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg flex justify-between items-center shadow-sm">
-              <div>
-                  <h3 className="font-bold text-blue-800">当前已有预约</h3>
-                  <div className="text-blue-600 text-sm mt-1">
-                      {(() => {
-                        const libId = reserveInfo.lib_id || reserveInfo.libId;
-                        const seatKey = reserveInfo.seat_key || reserveInfo.seatKey;
-                        const lib = libs.find(l => l.id === libId);
-                        const floor = lib ? (lib.name.split(' - ')[1] || lib.name) : libId;
-                        const seatName = reserveSeatName || (selectedLib === libId && Array.isArray(seats) ? (seats.find(s => s.key === seatKey)?.name || seatKey) : seatKey);
-                        const statusText = reserveInfo.status === 3 ? '已入座' : '未签到';
-                        return (
-                          <>
-                            <p>楼层: <span className="font-bold">{floor}</span></p>
-                            <p>座位: <span className="font-mono font-bold">{seatName}</span></p>
-                            <p>状态: {statusText}</p>
-                          </>
-                        )
-                      })()}
-                  </div>
-              </div>
-              <button onClick={handleCancel} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors shadow">
-                  取消预约
-              </button>
-          </div>
-      )}
-
-      <div className="bg-white p-4 rounded-lg shadow-sm border space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-                 <label className="block text-sm font-medium text-gray-700 mb-1">选择场馆 (图书馆 - 楼层)</label>
+    <div className="relative min-h-[calc(100vh-8rem)]">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md border-b border-slate-200 -mx-4 md:-mx-8 px-4 md:px-8 py-4 mb-6 flex flex-col md:flex-row gap-4 md:items-center justify-between shadow-sm">
+         <div className="flex-1 max-w-md">
+             <div className="relative">
+                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                  <select 
-                     className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
+                     className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 shadow-sm transition-all" 
                      value={selectedLib || ''} 
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleLibChange(Number(e.target.value))}
                     disabled={loading}
                  >
-                     <option value="">请选择...</option>
-                    {libs.map((l: Lib) => <option key={l.id} value={l.id}>{l.name} {l.status === 1 ? '' : '(闭馆)'}</option>)}
+                     <option value="">Select Library & Floor...</option>
+                    {libs.map((l: Lib) => <option key={l.id} value={l.id}>{l.name} {l.status === 1 ? '' : '(Closed)'}</option>)}
                  </select>
-                {libsError && <div className="text-red-600 text-sm mt-2">{libsError}</div>}
              </div>
+             {libsError && <div className="text-rose-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {libsError}</div>}
          </div>
-       </div>
+         
+         {/* Status Indicators (Legend) */}
+         <div className="flex gap-4 text-xs text-slate-500 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-300"></span>Available</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse"></span>Mine</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-200"></span>Taken</div>
+         </div>
+      </div>
 
-      {loading && <div className="text-center py-8 text-gray-500">正在加载座位信息...</div>}
-
-      {seatsError && !loading && <div className="text-center py-6 text-red-600">{seatsError}</div>}
-
-      {seats && seats.length > 0 && (
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <h4 className="font-bold mb-4 text-gray-700 flex items-center gap-2">
-                   <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
-                   座位分布
-              </h4>
-              {renderSeats(seats)}
-              <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t pt-4">
-                <div className="text-sm text-gray-600">
-                  {selectedSeatKey ? (
-                    <>已选择座位：<span className="font-mono font-bold">{selectedSeatName}</span></>
-                  ) : (
-                    <>请点击上方座位进行选择</>
-                  )}
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleReserveSelected}
-                    disabled={!selectedSeatKey}
-                    className={`px-4 py-2 rounded shadow ${selectedSeatKey ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
-                  >
-                    预约
+      {/* Main Content */}
+      <div className="space-y-6">
+          {/* Reservation Status Card */}
+          {reserveInfo && (
+              <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
+                  <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                          <Clock className="w-6 h-6" />
+                      </div>
+                      <div>
+                          <h3 className="font-bold text-indigo-900">Active Reservation</h3>
+                          <div className="text-indigo-700 text-sm mt-1 space-y-0.5">
+                              {(() => {
+                                const libId = reserveInfo.lib_id || reserveInfo.libId;
+                                const seatKey = reserveInfo.seat_key || reserveInfo.seatKey;
+                                const lib = libs.find(l => l.id === libId);
+                                const floor = lib ? (lib.name.split(' - ')[1] || lib.name) : libId;
+                                const seatName = reserveSeatName || (selectedLib === libId && Array.isArray(seats) ? (seats.find(s => s.key === seatKey)?.name || seatKey) : seatKey);
+                                const statusText = reserveInfo.status === 3 ? 'Seated' : 'Waiting for Sign-in';
+                                return (
+                                  <>
+                                    <p className="flex items-center gap-2"><span className="opacity-70">Location:</span> <span className="font-medium">{floor}</span></p>
+                                    <p className="flex items-center gap-2"><span className="opacity-70">Seat:</span> <span className="font-mono font-bold bg-white/50 px-1.5 rounded">{seatName}</span></p>
+                                    <p className="flex items-center gap-2"><span className="opacity-70">Status:</span> <span className="font-medium">{statusText}</span></p>
+                                  </>
+                                )
+                              })()}
+                          </div>
+                      </div>
+                  </div>
+                  <button onClick={handleCancel} className="w-full md:w-auto px-6 py-2.5 bg-white text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-50 transition-colors font-medium shadow-sm flex items-center justify-center gap-2">
+                      <X className="w-4 h-4" /> Cancel
                   </button>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const res = await libApi.signin();
-                        alert(res.data?.message || '已发起签到');
-                      } catch (err: any) {
-                        alert('签到失败: ' + (err.response?.data?.detail || err.message));
-                      }
-                    }}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 shadow"
-                  >
-                    蓝牙签到
-                  </button>
-                </div>
               </div>
-          </div>
-      )}
-      {!loading && seats && seats.length === 0 && (
-        <div className="text-center py-6 text-gray-500">暂无座位数据</div>
-      )}
-      
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h4 className="font-bold mb-4 text-gray-700 flex items-center gap-2">
-          <span className="w-2 h-6 bg-green-500 rounded-full"></span>
-          常用座位快捷预约
-        </h4>
-        {frequent && frequent.length > 0 ? (
-          <div className="flex gap-2">
-            {frequent.map((s) => (
-              <button
-                key={s.seat_key}
-                onClick={() => handleReserve(s.seat_key)}
-                className={`px-3 py-2 rounded border text-sm ${frequentStatus[`${s.lib_id}:${s.seat_key}`] ? 'bg-white hover:bg-gray-50' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}`}
-                title={`Lib: ${s.lib_id}`}
-                disabled={!frequentStatus[`${s.lib_id}:${s.seat_key}`]}
-              >
-                <span className="mr-2">{s.info || s.seat_key}</span>
-                <span className={`text-xs ${frequentStatus[`${s.lib_id}:${s.seat_key}`] ? 'text-green-600' : 'text-red-600'}`}>
-                  {frequentStatus[`${s.lib_id}:${s.seat_key}`] ? '可预约' : '不可预约'}
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="text-gray-500 text-sm">未配置常用座位或无法获取</div>
-        )}
+          )}
+
+          {/* Quick Reserve Frequent Seats */}
+          {frequent && frequent.length > 0 && (
+            <div className="mb-6">
+                <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Frequent Seats</h4>
+                <div className="flex flex-wrap gap-3">
+                    {frequent.map((s) => (
+                    <button
+                        key={s.seat_key}
+                        onClick={() => handleReserve(s.seat_key)}
+                        className={cn(
+                            "group flex items-center gap-3 px-4 py-3 rounded-xl border text-sm transition-all shadow-sm",
+                            frequentStatus[`${s.lib_id}:${s.seat_key}`] 
+                                ? "bg-white border-slate-200 hover:border-emerald-400 hover:shadow-md cursor-pointer" 
+                                : "bg-slate-50 border-transparent opacity-60 cursor-not-allowed"
+                        )}
+                        disabled={!frequentStatus[`${s.lib_id}:${s.seat_key}`]}
+                    >
+                        <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 font-bold font-mono group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+                            {s.info || s.seat_key}
+                        </span>
+                        <div className="flex flex-col items-start">
+                            <span className="font-medium text-slate-700">Quick Book</span>
+                            <span className={cn("text-xs", frequentStatus[`${s.lib_id}:${s.seat_key}`] ? "text-emerald-600" : "text-rose-500")}>
+                                {frequentStatus[`${s.lib_id}:${s.seat_key}`] ? 'Available' : 'Taken'}
+                            </span>
+                        </div>
+                    </button>
+                    ))}
+                </div>
+            </div>
+          )}
+
+          {/* Seat Map */}
+          {loading && (
+              <div className="py-20 flex flex-col items-center justify-center text-slate-400">
+                  <div className="w-10 h-10 border-4 border-slate-200 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+                  <p>Loading layout...</p>
+              </div>
+          )}
+
+          {seatsError && !loading && (
+              <div className="py-12 text-center bg-rose-50 rounded-xl border border-rose-100 text-rose-600 flex flex-col items-center gap-2">
+                  <AlertCircle className="w-8 h-8 opacity-50" />
+                  {seatsError}
+              </div>
+          )}
+
+          {seats && seats.length > 0 && (
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                  {renderSeats(seats)}
+              </div>
+          )}
+          
+          {!loading && seats && seats.length === 0 && !seatsError && (
+             <div className="py-12 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                 No seats available to display
+             </div>
+          )}
+      </div>
+
+      {/* Floating Action Bar (Bottom Right) */}
+      <div className="fixed bottom-24 md:bottom-8 right-4 md:right-8 flex flex-col gap-3 items-end z-30">
+           {/* Confirm Selection FAB (Only shows when seat selected) */}
+           {selectedSeatKey && (
+               <button
+                  onClick={handleReserveSelected}
+                  className="bg-slate-900 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all px-6 py-3 rounded-full flex items-center gap-2 font-medium"
+               >
+                   <Check className="w-5 h-5" />
+                   Book {selectedSeatName}
+               </button>
+           )}
+
+           {/* Bluetooth Sign-in FAB (Always visible) */}
+           <button
+              onClick={async () => {
+                try {
+                  const res = await libApi.signin();
+                  alert(res.data?.message || '已发起签到');
+                } catch (err: any) {
+                  alert('签到失败: ' + (err.response?.data?.detail || err.message));
+                }
+              }}
+              className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg hover:shadow-indigo-200/50 hover:scale-105 transition-all px-6 py-3 rounded-full flex items-center gap-2 font-bold"
+           >
+              <Bluetooth className="w-5 h-5" />
+              Bluetooth Sign-in
+           </button>
       </div>
     </div>
   );

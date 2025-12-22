@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { taskApi, type Task } from '../api/client';
 import SeatPicker from '../components/SeatPicker';
+import { cn } from '../lib/utils';
+import { Plus, Trash2, Clock, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
 
 const ScheduledTasks: React.FC = () => {
+    // ==================================================================================
+    // BUSINESS LOGIC START
+    // ==================================================================================
     const [tasks, setTasks] = useState<Task[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [showSeatPicker, setShowSeatPicker] = useState(false);
@@ -83,86 +88,170 @@ const ScheduledTasks: React.FC = () => {
             alert('创建失败');
         }
     }
+    // ==================================================================================
+    // BUSINESS LOGIC END
+    // ==================================================================================
+
+    const ToggleSwitch = ({ enabled }: { enabled: boolean }) => (
+        <div className={cn("w-11 h-6 bg-slate-200 rounded-full relative transition-colors duration-200 ease-in-out", enabled && "bg-indigo-600")}>
+            <span className={cn("absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 shadow-sm", enabled && "translate-x-5")} />
+        </div>
+    );
 
     return (
-        <div className="p-4 space-y-6">
+        <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-gray-800">定时任务管理</h1>
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900">Scheduled Tasks</h1>
+                    <p className="text-slate-500 text-sm mt-1">Manage automated reservations and sign-ins.</p>
+                </div>
                 <button 
                     onClick={() => setShowModal(true)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 shadow"
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 shadow-sm hover:shadow-md transition-all flex items-center gap-2 font-medium"
                 >
-                    + 新建任务
+                    <Plus className="w-5 h-5" />
+                    <span className="hidden sm:inline">New Task</span>
                 </button>
             </div>
             
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {tasks.map(task => (
-                    <div key={task.id} className="bg-white p-4 rounded-lg shadow border relative">
-                        <button 
-                            onClick={() => handleDelete(task.id)}
-                            className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
-                        >
-                            ×
-                        </button>
-                        <h3 className="font-bold text-lg mb-2">
-                            {task.task_type === 'signin' && '✨ 自动签到'}
-                            {task.task_type === 'reserve' && '🪑 预约'}
-                        </h3>
-                        <p className="text-gray-600 mb-2">
-                            时间: <span className="font-mono font-bold bg-gray-100 px-1 rounded">{formatCron(task.cron_expression)}</span>
-                        </p>
-                        
-                        {task.task_type === 'reserve' && (
-                            <div className="text-sm text-gray-500 mb-2">
-                                策略: {task.config.strategy === 'default_all' ? '尝试所有常用座位' : `指定座位`}
-                            </div>
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                            <th className="px-6 py-4">Type</th>
+                            <th className="px-6 py-4">Time (Cron)</th>
+                            <th className="px-6 py-4">Status</th>
+                            <th className="px-6 py-4">Last Run</th>
+                            <th className="px-6 py-4">Result</th>
+                            <th className="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {tasks.map(task => (
+                            <tr key={task.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className={cn("w-2 h-2 rounded-full", task.task_type === 'signin' ? 'bg-indigo-500' : 'bg-violet-500')}></div>
+                                        <span className="font-medium text-slate-700">
+                                            {task.task_type === 'signin' ? 'Auto Sign-in' : 'Reservation'}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <span className="font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs">
+                                        {formatCron(task.cron_expression)}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <ToggleSwitch enabled={task.is_enabled} />
+                                </td>
+                                <td className="px-6 py-4 text-sm text-slate-500">
+                                    {task.last_run ? new Date(task.last_run).toLocaleString() : '-'}
+                                </td>
+                                <td className="px-6 py-4">
+                                    <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium", 
+                                        task.last_status === 'success' ? "bg-emerald-50 text-emerald-700" : 
+                                        task.last_status ? "bg-rose-50 text-rose-700" : "bg-slate-100 text-slate-500"
+                                    )}>
+                                        {task.last_status === 'success' ? <CheckCircle2 className="w-3 h-3"/> : task.last_status ? <AlertCircle className="w-3 h-3"/> : null}
+                                        {task.last_status || 'Pending'}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                    <button 
+                                        onClick={() => handleDelete(task.id)}
+                                        className="text-slate-400 hover:text-rose-600 transition-colors p-2 hover:bg-rose-50 rounded-lg"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                        {tasks.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                                    No tasks found. Create one to get started.
+                                </td>
+                            </tr>
                         )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Mobile Card List View */}
+            <div className="md:hidden grid gap-4">
+                {tasks.map(task => (
+                    <div key={task.id} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className={cn("p-2 rounded-lg", task.task_type === 'signin' ? 'bg-indigo-50 text-indigo-600' : 'bg-violet-50 text-violet-600')}>
+                                    {task.task_type === 'signin' ? <Bluetooth className="w-5 h-5"/> : <Calendar className="w-5 h-5"/>}
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-900">
+                                        {task.task_type === 'signin' ? 'Auto Sign-in' : 'Reservation'}
+                                    </h3>
+                                    <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        <span className="font-mono">{formatCron(task.cron_expression)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <ToggleSwitch enabled={task.is_enabled} />
+                        </div>
                         
-                        <div className="mt-4 pt-4 border-t text-sm">
-                            <p className="flex justify-between">
-                                <span>上次运行:</span>
-                                <span>{task.last_run ? new Date(task.last_run).toLocaleString() : '从未'}</span>
-                            </p>
-                            <p className="flex justify-between mt-1">
-                                <span>状态:</span>
-                                <span className={task.last_status === 'success' ? 'text-green-600' : 'text-red-600'}>
-                                    {task.last_status || '-'}
+                        <div className="space-y-2 text-sm border-t border-slate-100 pt-3 mt-3">
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Last Run</span>
+                                <span className="text-slate-900">{task.last_run ? new Date(task.last_run).toLocaleTimeString() : '-'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Result</span>
+                                <span className={cn("font-medium", task.last_status === 'success' ? "text-emerald-600" : "text-rose-600")}>
+                                    {task.last_status || 'Pending'}
                                 </span>
-                            </p>
+                            </div>
                             {task.last_message && (
-                                <p className="mt-1 text-xs text-gray-400 truncate" title={task.last_message}>
+                                <div className="text-xs text-slate-400 mt-1 truncate bg-slate-50 p-2 rounded">
                                     {task.last_message}
-                                </p>
+                                </div>
                             )}
                         </div>
+
+                        <button 
+                            onClick={() => handleDelete(task.id)}
+                            className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 p-1"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
                     </div>
                 ))}
             </div>
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
-                        <h2 className="text-xl font-bold mb-4">新建定时任务</h2>
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+                        <h2 className="text-xl font-bold mb-6 text-slate-900">New Task</h2>
+                        <form onSubmit={handleSubmit} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">任务类型</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Task Type</label>
                                 <select 
-                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
                                     value={type}
                                     onChange={e => setType(e.target.value)}
                                 >
-                                    <option value="reserve">预约</option>
-                                    <option value="signin">蓝牙签到</option>
+                                    <option value="reserve">Seat Reservation</option>
+                                    <option value="signin">Bluetooth Sign-in</option>
                                 </select>
                             </div>
                             
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">执行时间 (每天)</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Execution Time (Daily)</label>
                                 <input 
                                     type="time" 
-                                    className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                                     value={time}
                                     onChange={e => setTime(e.target.value)}
                                     required
@@ -170,43 +259,44 @@ const ScheduledTasks: React.FC = () => {
                             </div>
                             
                             {type === 'reserve' && (
-                                <div className="space-y-4 border-t pt-4">
+                                <div className="space-y-5 border-t border-slate-100 pt-5">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">选座策略</label>
-                                        <div className="space-y-2">
-                                            <label className="flex items-center space-x-2 cursor-pointer">
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">Strategy</label>
+                                        <div className="space-y-3">
+                                            <label className="flex items-center space-x-3 cursor-pointer group">
                                                 <input 
                                                     type="radio" 
                                                     checked={strategy === 'default_all'} 
                                                     onChange={() => setStrategy('default_all')}
-                                                    className="text-blue-600 focus:ring-blue-500"
+                                                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                                                 />
-                                                <span>尝试所有常用座位 (推荐)</span>
+                                                <span className="text-slate-700 group-hover:text-indigo-600 transition-colors">Try all frequent seats (Recommended)</span>
                                             </label>
-                                            <label className="flex items-center space-x-2 cursor-pointer">
+                                            <label className="flex items-center space-x-3 cursor-pointer group">
                                                 <input 
                                                     type="radio" 
                                                     checked={strategy === 'custom'} 
                                                     onChange={() => setStrategy('custom')}
-                                                    className="text-blue-600 focus:ring-blue-500"
+                                                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                                                 />
-                                                <span>指定特定座位</span>
+                                                <span className="text-slate-700 group-hover:text-indigo-600 transition-colors">Pick specific seat</span>
                                             </label>
                                         </div>
                                     </div>
                                     
                                     {strategy === 'custom' && (
-                                        <div className="space-y-2">
+                                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                                             <button
                                                 type="button"
                                                 onClick={() => setShowSeatPicker(true)}
-                                                className="w-full border px-3 py-2 rounded hover:bg-gray-50"
+                                                className="w-full bg-white border border-slate-300 px-4 py-2 rounded-lg hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-600 transition-all text-sm font-medium"
                                             >
-                                                选择座位
+                                                Select Seat
                                             </button>
                                             {pickedSeat && (
-                                                <div className="text-xs text-gray-600">
-                                                    已选择：{pickedSeat.libName} - {pickedSeat.seatName}
+                                                <div className="mt-2 text-xs text-indigo-600 font-medium flex items-center gap-1">
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                    Selected: {pickedSeat.libName} - {pickedSeat.seatName}
                                                 </div>
                                             )}
                                         </div>
@@ -214,19 +304,19 @@ const ScheduledTasks: React.FC = () => {
                                 </div>
                             )}
                             
-                            <div className="flex gap-4 pt-4">
+                            <div className="flex gap-3 pt-4">
                                 <button 
                                     type="button" 
                                     onClick={() => setShowModal(false)}
-                                    className="flex-1 bg-gray-100 text-gray-700 py-2 rounded hover:bg-gray-200 transition-colors"
+                                    className="flex-1 bg-white border border-slate-200 text-slate-700 py-2.5 rounded-lg hover:bg-slate-50 transition-colors font-medium"
                                 >
-                                    取消
+                                    Cancel
                                 </button>
                                 <button 
                                     type="submit" 
-                                    className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors"
+                                    className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-sm"
                                 >
-                                    创建
+                                    Create Task
                                 </button>
                             </div>
                         </form>
