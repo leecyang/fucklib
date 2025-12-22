@@ -231,7 +231,7 @@ class LibService:
 
             # 3. Check expiration
             exp_date = reserve_data.get('exp_date')
-            if exp_date:
+            if exp_date is not None:
                 try:
                     # Ensure comparison is valid (time.time() is float, exp_date should be int/float)
                     if time.time() > float(exp_date):
