@@ -21,6 +21,21 @@ const InteractiveReserve: React.FC = () => {
   const [reserveSeatName, setReserveSeatName] = useState<string | null>(null);
   const [frequentNames, setFrequentNames] = useState<Record<string, string>>({});
 
+  const checkLibOpen = (l: Lib) => {
+    if (l.status !== 1) return false;
+    if (!l.open_time_str || !l.close_time_str) return true;
+    const toMin = (s: string) => {
+      const [h, m] = s.split(':').map((x) => parseInt(x, 10));
+      return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+    };
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const o = toMin(l.open_time_str);
+    const c = toMin(l.close_time_str);
+    if (c >= o) return nowMin >= o && nowMin <= c;
+    return nowMin >= o || nowMin <= c;
+  };
+
   useEffect(() => {
     fetchLibs();
     fetchReserveInfo();

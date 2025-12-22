@@ -4,9 +4,10 @@ import { libApi, type Lib, type Seat } from '../api/client';
 interface SeatPickerProps {
   onClose: () => void;
   onPick: (data: { libId: number, libName: string, seatKey: string, seatName: string }) => void;
+  ignoreTimeCheck?: boolean;
 }
 
-const SeatPicker: React.FC<SeatPickerProps> = ({ onClose, onPick }) => {
+const SeatPicker: React.FC<SeatPickerProps> = ({ onClose, onPick, ignoreTimeCheck = false }) => {
   const [libs, setLibs] = useState<Lib[]>([]);
   const [selectedLib, setSelectedLib] = useState<number | null>(null);
   const [seats, setSeats] = useState<Seat[]>([]);
