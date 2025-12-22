@@ -56,7 +56,16 @@ export default function Settings() {
       setDialog({ title: '解析成功', body: '链接解析成功，配置已更新', variant: 'success' });
       loadConfig();
     } catch (err: any) {
-      setDialog({ title: '解析失败', body: err.response?.data?.detail || '解析链接失败，请稍后重试', variant: 'error' });
+      const detail = err.response?.data?.detail || '';
+      if (detail.includes('无法解析学号')) {
+        setDialog({ 
+          title: '无法解析学号', 
+          body: '请前往公众号检查是否已登录“我去图书馆”小程序，登录后重新获取链接。', 
+          variant: 'error' 
+        });
+      } else {
+        setDialog({ title: '解析失败', body: detail || '解析链接失败，请稍后重试', variant: 'error' });
+      }
     }
   };
 

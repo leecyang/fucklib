@@ -21,6 +21,8 @@ api.interceptors.response.use(
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
+    } else if (msg.includes('无法解析学号')) {
+      alert('无法解析学号，请前往公众号检查是否已登录“我去图书馆”小程序');
     } else if (msg.includes('40005') || msg.includes('绑定学号')) {
       alert('请先在微信端绑定学号，并在设置中更新 Cookie');
     } else if (status === 403 || msg.includes('40001') || msg.includes('access denied') || msg.includes('临时限制')) {
