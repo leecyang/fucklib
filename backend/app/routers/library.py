@@ -65,6 +65,13 @@ def get_reserve_info(service: LibService = Depends(get_lib_service)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/has_reserve")
+def has_reserve(service: LibService = Depends(get_lib_service)):
+    try:
+        return {"has": service.has_current_reservation()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/reserve")
 def reserve_seat(lib_id: int, seat_key: str, service: LibService = Depends(get_lib_service)):
     try:

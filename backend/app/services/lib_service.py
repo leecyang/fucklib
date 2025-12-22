@@ -233,9 +233,7 @@ class LibService:
             # 3. Check date (Ignore past reservations)
             # If the reservation date is strictly before today, it's a stale record.
             date_str = reserve_data.get('date')
-            if not date_str or str(date_str).strip() == '':
-                return None
-            else:
+            if date_str and str(date_str).strip() != '':
                 try:
                     res_date = datetime.strptime(str(date_str), "%Y-%m-%d").date()
                     today = datetime.now().date()
@@ -253,6 +251,9 @@ class LibService:
             logger.error(f"get_reserve_info failed: {e}")
             return None
 
+    def has_current_reservation(self) -> bool:
+        info = self.get_reserve_info()
+        return bool(info)
     # --- Interactive Info ---
     def get_lib_list(self):
         payload = {
