@@ -19,6 +19,7 @@ const InteractiveReserve: React.FC = () => {
   const [selectedSeatName, setSelectedSeatName] = useState<string | null>(null);
   const [frequentStatus, setFrequentStatus] = useState<Record<string, boolean>>({});
   const [reserveSeatName, setReserveSeatName] = useState<string | null>(null);
+  const [frequentNames, setFrequentNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchLibs();
@@ -71,17 +72,20 @@ const InteractiveReserve: React.FC = () => {
       const list = Array.isArray(res.data) ? res.data.slice(0, 2) : [];
       setFrequent(list);
       const statusMap: Record<string, boolean> = {};
+      const nameMap: Record<string, string> = {};
       for (const s of list) {
         try {
           const layout = await libApi.getLayout(s.lib_id);
           const seatList = layout.data?.lib_layout?.seats || [];
           const found = seatList.find((st: any) => st.key === s.seat_key);
           statusMap[`${s.lib_id}:${s.seat_key}`] = found ? found.status === 1 : false;
+          if (found?.name) nameMap[`${s.lib_id}:${s.seat_key}`] = found.name;
         } catch (e) {
           statusMap[`${s.lib_id}:${s.seat_key}`] = false;
         }
       }
       setFrequentStatus(statusMap);
+      setFrequentNames(nameMap);
     } catch (e) {
       console.error(e);
     }
@@ -220,7 +224,7 @@ const InteractiveReserve: React.FC = () => {
       <div className="space-y-6">
           {/* Reservation Status Card */}
           {reserveInfo && (
-              <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
+              <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
                   <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
                           <Clock className="w-6 h-6" />
@@ -270,7 +274,7 @@ const InteractiveReserve: React.FC = () => {
                         disabled={!frequentStatus[`${s.lib_id}:${s.seat_key}`]}
                     >
                         <span className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700 font-bold font-mono group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
-                            {s.seat_key}
+                            {frequentNames[`${s.lib_id}:${s.seat_key}`] || s.seat_key}
                         </span>
                         <div className="flex flex-col items-start min-w-0">
                             <span className="font-medium text-slate-700 whitespace-nowrap truncate max-w-[8rem]">{s.info || '快捷预约'}</span>
