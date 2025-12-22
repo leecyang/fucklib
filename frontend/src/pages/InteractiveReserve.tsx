@@ -171,22 +171,7 @@ const InteractiveReserve: React.FC = () => {
 
   const renderSeats = (seatList: Seat[]) => {
       const libObj = selectedLib ? libs.find(l => l.id === selectedLib) : null;
-      const openStr = libObj?.open_time_str;
-      const closeStr = libObj?.close_time_str;
-      const isWithinWindow = (() => {
-        if (!openStr || !closeStr) return true;
-        const toMin = (s: string) => {
-          const [h, m] = s.split(':').map((x) => parseInt(x, 10));
-          return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
-        };
-        const now = new Date();
-        const nowMin = now.getHours() * 60 + now.getMinutes();
-        const o = toMin(openStr);
-        const c = toMin(closeStr);
-        if (c >= o) return nowMin >= o && nowMin <= c;
-        // 跨日窗口（如 22:00-06:00）
-        return nowMin >= o || nowMin <= c;
-      })();
+      const isWithinWindow = libObj ? checkLibOpen(libObj) : true;
       return (
           <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3">
               {seatList.map(seat => {
@@ -241,7 +226,7 @@ const InteractiveReserve: React.FC = () => {
                     disabled={loading}
                  >
                      <option value="">Select Library & Floor...</option>
-                    {libs.map((l: Lib) => <option key={l.id} value={l.id}>{l.name} {l.status === 1 ? '' : '(Closed)'}</option>)}
+                    {libs.map((l: Lib) => <option key={l.id} value={l.id}>{l.name} {checkLibOpen(l) ? '' : '(Closed)'}</option>)}
                  </select>
              </div>
              {libsError && <div className="text-rose-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> {libsError}</div>}

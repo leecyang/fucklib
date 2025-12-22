@@ -87,7 +87,7 @@ const SeatPicker: React.FC<SeatPickerProps> = ({ onClose, onPick }) => {
                 const nowMin = now.getHours() * 60 + now.getMinutes();
                 const o = openStr ? toMin(openStr) : undefined;
                 const c = closeStr ? toMin(closeStr) : undefined;
-                const within = (o === undefined || c === undefined) ? true : (c >= o ? (nowMin >= o && nowMin <= c) : (nowMin >= o || nowMin <= c));
+                const within = ignoreTimeCheck ? true : ((o === undefined || c === undefined) ? true : (c >= o ? (nowMin >= o && nowMin <= c) : (nowMin >= o || nowMin <= c)));
                 const isFree = ((seat as any).seat_status === 1 || seat.status === 1) && within;
                 return (
                   <button

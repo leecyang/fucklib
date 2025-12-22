@@ -26,7 +26,11 @@ api.interceptors.response.use(
     } else if (msg.includes('40005') || msg.includes('绑定学号')) {
       alert('请先在微信端绑定学号，并在设置中更新 Cookie');
     } else if (status === 403 || msg.includes('40001') || msg.includes('access denied') || msg.includes('临时限制')) {
-      alert('会话受限或被拒绝，请刷新 Cookie / SessID 或稍后再试');
+      if (msg.includes('异常预约') || detail.includes('异常预约') || (Array.isArray(error?.response?.data?.errors) && error.response.data.errors.some((e: any) => e.code === 1))) {
+          alert('您因尝试预约非法座位导致账号被封禁');
+      } else {
+          alert('会话受限或被拒绝，请刷新 Cookie / SessID 或稍后再试');
+      }
     }
     return Promise.reject(error);
   }
