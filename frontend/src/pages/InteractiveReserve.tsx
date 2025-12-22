@@ -190,10 +190,7 @@ const InteractiveReserve: React.FC = () => {
                  {libs.find(l => l.id === selectedLib)?.name} <br/>
                  <span className="text-indigo-600 font-bold text-lg">{displayName} 号座</span>
             </div>
-            <p className="text-xs text-slate-400">
-                请确保您能按时签到，违约将影响账号信用。<br/>
-                <span className="text-indigo-400">提示：到馆后可使用本页右下角的「蓝牙签到」或设置中的远程签到功能。</span>
-            </p>
+            <p className="text-xs text-slate-400">请确保您能按时签到，违约将影响账号信用。或者使用远程蓝牙签到。</p>
         </div>,
         '确认预约'
     );
@@ -437,19 +434,15 @@ const InteractiveReserve: React.FC = () => {
            {/* Bluetooth Sign-in FAB (Always visible) */}
            <button
               onClick={async () => {
-                // Pre-check: if no reservation, warn user
-                if (!reserveInfo || (!reserveInfo.seat_key && !reserveInfo.seatKey)) {
-                    await customAlert('请您先预约座位再进行蓝牙签到', '无有效预约');
-                    return;
-                }
-                
                 try {
+                  if (!reserveInfo) {
+                    await customAlert('请您先预约座位再进行蓝牙签到。', '蓝牙签到');
+                    return;
+                  }
                   const res = await libApi.signin();
-                  await customAlert(res.data?.message || '已发起签到', '签到结果');
+                  await customAlert(res.data?.message || '已发起签到', '蓝牙签到');
                 } catch (err: any) {
-                  // Errors are handled by interceptor, but if we need custom handling:
-                  // The interceptor handles alerts, so we don't need to double alert unless it's specific logic.
-                  // For now, let interceptor handle errors.
+                  await customAlert('签到失败: ' + (err.response?.data?.detail || err.message), '签到失败');
                 }
               }}
               className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg hover:shadow-indigo-200/50 hover:scale-105 transition-all px-6 py-3 rounded-full flex items-center gap-2 font-bold"

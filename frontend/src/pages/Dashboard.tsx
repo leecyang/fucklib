@@ -201,7 +201,19 @@ export default function Dashboard() {
                                 {t.task_type === 'signin' ? '蓝牙签到' : '预约'}
                             </span>
                             <span className="font-mono text-xs text-slate-400">
-                                {t.cron_expression.split(' ').slice(0, 2).reverse().map(x => x.padStart(2, '0')).join(':')}
+                                {(() => {
+                                    try {
+                                        const parts = (t.cron_expression || '').split(' ');
+                                        if (parts.length >= 2) {
+                                            const minute = String(parts[0]).padStart(2, '0');
+                                            const hour = String(parts[1]).padStart(2, '0');
+                                            return `${hour}:${minute}`;
+                                        }
+                                        return t.cron_expression;
+                                    } catch {
+                                        return t.cron_expression;
+                                    }
+                                })()}
                             </span>
                         </div>
                         {/* Progress Bar Simulation */}

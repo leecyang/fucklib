@@ -16,6 +16,7 @@ api.interceptors.response.use(
     const status = error?.response?.status;
     const detail = error?.response?.data?.detail || '';
     const msg = String(detail).toLowerCase();
+    const detailStr = String(detail);
     
     if (status === 401) {
       localStorage.removeItem('token');
@@ -26,6 +27,13 @@ api.interceptors.response.use(
       alert('无法解析学号，请前往公众号检查是否已登录“我去图书馆”小程序', '绑定失败');
     } else if (msg.includes('40005') || msg.includes('绑定学号')) {
       alert('请先在微信端绑定学号，并在设置中更新 Cookie', '需要绑定学号');
+    } else if (
+      detailStr.includes('预约限制') ||
+      detailStr.includes('被限制预约') ||
+      msg.includes('临时限制') ||
+      msg.includes('40001')
+    ) {
+      alert('您的账号当前被限制预约，请在设置页查看解除时间或稍后再试', '限制预约');
     } else if (status === 403 || status === 500 || msg.includes('40001') || msg.includes('access denied') || msg.includes('临时限制')) {
       // Handle 500 errors that might contain JSON in detail (Flask behavior)
       let isBan = false;
@@ -54,9 +62,6 @@ api.interceptors.response.use(
           if (detailStr.includes('Reserve Failed') || detailStr.includes('Fatal Reverse') || detailStr.includes('系统未确认座位')) {
               displayMsg = '预约失败：系统未确认座位，请稍后重试。这通常是因为座位已被他人抢占。';
               title = '预约失败';
-          } else if (detailStr.includes('临时限制') || detailStr.includes('access denied') || detailStr.includes('异常预约')) {
-              displayMsg = '您的账号当前被限制预约，请稍后再试或检查违规记录。';
-              title = '限制预约';
           } else if (detailStr.includes('Prereserve Failed')) {
               displayMsg = '预选失败，请稍后重试';
               title = '预选失败';

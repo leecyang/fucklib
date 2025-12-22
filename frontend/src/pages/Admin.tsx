@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { adminApi, type User, type InviteCode } from '../api/client';
+import { alert } from '../components/Dialog';
 
 const Admin: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);

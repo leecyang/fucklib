@@ -3,6 +3,7 @@ import api, { libApi, adminApi } from '../api/client';
 import { cn } from '../lib/utils';
 import { Shield, Smartphone, Link as LinkIcon, User, Ticket, Save, RefreshCw, QrCode, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { alert } from '../components/Dialog';
 
 export default function Settings() {
   const [config, setConfig] = useState<any>({ major: '', minor: '' });

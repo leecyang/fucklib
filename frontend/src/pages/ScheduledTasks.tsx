@@ -3,6 +3,7 @@ import { taskApi, type Task } from '../api/client';
 import SeatPicker from '../components/SeatPicker';
 import { cn } from '../lib/utils';
 import { Plus, Trash2, Clock, CheckCircle2, AlertCircle, Calendar, Bluetooth } from 'lucide-react';
+import { alert } from '../components/Dialog';
 
 const ScheduledTasks: React.FC = () => {
     // ==================================================================================
