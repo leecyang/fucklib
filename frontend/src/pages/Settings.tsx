@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api, { libApi, adminApi } from '../api/client';
 import { cn } from '../lib/utils';
 import { Shield, Smartphone, Link as LinkIcon, AlertTriangle, User, Ticket, Save, RefreshCw, QrCode } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
   const [config, setConfig] = useState<any>({ major: '', minor: '' });
@@ -11,6 +12,7 @@ export default function Settings() {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [invites, setInvites] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadConfig();
@@ -149,6 +151,10 @@ export default function Settings() {
                         解析并更新
                     </button>
                 </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  提示：请执行两次获取链接操作。第一次粘贴到上面的「Cookie 链接（自动选座）」，
+                  第二次粘贴到下方的「签到授权链接（远程蓝牙签到）」。
+                </p>
             </div>
 
             <div>
@@ -203,6 +209,21 @@ export default function Settings() {
           className="w-full bg-emerald-600 text-white px-6 py-2.5 rounded-lg hover:bg-emerald-700 font-bold transition-colors shadow-sm flex items-center justify-center gap-2"
         >
           <Save className="w-4 h-4" /> 保存配置
+        </button>
+        <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+          提示：安卓可安装 nRF Connect（下载链接：<span className="break-all">https://wwn.lanzouj.com/iV9mw03eqzsh</span>），靠近图书馆打卡设备，在列表找到 iBeacon 项查看其 UUID、Major、Minor；苹果可在 App Store 安装「Beacon服务」应用，设置 UUID 为
+          <span className="break-all"> FDA50693-A4E2-4FB1-AFCF-C6EB07647825 </span>
+          后在设备列表查看对应的 Major / Minor 数值并填入上方。
+        </p>
+      </div>
+      
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 className="text-lg font-bold text-slate-900 mb-4">账户操作</h2>
+        <button
+          onClick={() => { localStorage.removeItem('token'); navigate('/login'); }}
+          className="w-full px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 font-bold"
+        >
+          退出登录
         </button>
       </div>
       

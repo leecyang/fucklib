@@ -69,9 +69,7 @@ export default function Layout() {
                 <BookOpen className="w-6 h-6" />
                 FuckLib
             </h1>
-            <button onClick={handleLogout} className="text-slate-500">
-                <LogOut className="w-5 h-5" />
-            </button>
+            <div />
         </div>
 
         {/* Content Container - Added pb-24 for mobile nav clearance */}

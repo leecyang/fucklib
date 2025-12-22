@@ -260,13 +260,13 @@ const InteractiveReserve: React.FC = () => {
           {frequent && frequent.length > 0 && (
             <div className="mb-6">
                 <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">常用座位</h4>
-                <div className="flex flex-wrap gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
                     {frequent.map((s) => (
                     <button
                         key={s.seat_key}
                         onClick={() => handleReserve(s.seat_key)}
                         className={cn(
-                            "group flex items-center gap-3 px-4 py-3 rounded-xl border text-sm transition-all shadow-sm",
+                            "group w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm transition-all shadow-sm",
                             frequentStatus[`${s.lib_id}:${s.seat_key}`] 
                                 ? "bg-white border-slate-200 hover:border-emerald-400 hover:shadow-md cursor-pointer" 
                                 : "bg-slate-50 border-transparent opacity-60 cursor-not-allowed"
@@ -277,7 +277,7 @@ const InteractiveReserve: React.FC = () => {
                             {frequentNames[`${s.lib_id}:${s.seat_key}`] || s.seat_key}
                         </span>
                         <div className="flex flex-col items-start min-w-0">
-                            <span className="font-medium text-slate-700 whitespace-nowrap truncate max-w-[8rem]">{s.info || '快捷预约'}</span>
+                            <span className="font-medium text-slate-700 whitespace-nowrap truncate max-w-[16rem] sm:max-w-[12rem]">{s.info || '快捷预约'}</span>
                             <span className={cn("text-xs", frequentStatus[`${s.lib_id}:${s.seat_key}`] ? "text-emerald-600" : "text-rose-500")}>
                                 {frequentStatus[`${s.lib_id}:${s.seat_key}`] ? '可预约' : '不可预约'}
                             </span>
