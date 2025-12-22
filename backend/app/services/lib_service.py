@@ -21,6 +21,8 @@ class LibService:
 
     def __init__(self, cookie: str):
         self.cookie = cookie
+        self.session = requests.Session()
+        self._lib_layout_seen = set()
         self.headers = {
             'Host': 'wechat.v2.traceint.com',
             'Connection': 'keep-alive',
@@ -42,20 +44,60 @@ class LibService:
         self._init_cookie()
 
     def _init_cookie(self):
-        # Add required cookie fields
         self.cookie = self.cookie + '; FROM_TYPE=weixin; v=5.5; Hm_lvt_7ecd21a13263a714793f376c18038a87=1713417820,1714277047,1714304621,1714376091; ' \
                                'Hm_lpvt_7ecd21a13263a714793f376c18038a87=' + str(int(time.time() - 1)) + '; SERVERID=' + \
                       random.choice(self.SERVERID) + '|' + str(int(time.time() - 1)) + '|1714376087'
         self.headers['Cookie'] = self.cookie
+        self.session.headers.update(self.headers)
+
+    def _extract_serverid(self, set_cookie_header: Optional[str]) -> Optional[str]:
+        if not set_cookie_header:
+            return None
+        idx = set_cookie_header.find('SERVERID=')
+        if idx == -1:
+            return None
+        end = set_cookie_header.find(';', idx)
+        if end == -1:
+            end = len(set_cookie_header)
+        return set_cookie_header[idx + len('SERVERID='):end]
+
+    def _reset_serverid(self, serverid: str):
+        if not serverid:
+            return
+        parts = self.cookie.split(';')
+        found = False
+        for i, p in enumerate(parts):
+            t = p.strip()
+            if t.startswith('SERVERID='):
+                parts[i] = ' SERVERID=' + serverid
+                found = True
+                break
+        if not found:
+            parts.append(' SERVERID=' + serverid)
+        self.cookie = ';'.join(parts)
+        self.headers['Cookie'] = self.cookie
+        self.session.headers['Cookie'] = self.cookie
 
     def _post(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            # logger.info(f"Sending request: {payload.get('operationName')}")
-            r = requests.post(self.BASE_URL, json=payload, headers=self.headers, timeout=10)
+            r = self.session.post(self.BASE_URL, json=payload, timeout=10)
             r.raise_for_status()
+            sc = r.headers.get('Set-Cookie')
+            sid = self._extract_serverid(sc)
+            if sid:
+                self._reset_serverid(sid)
             data = r.json()
             if 'errors' in data:
                 logger.error(f"GraphQL Error for {payload.get('operationName')}: {data['errors']}")
+                try:
+                    errs = data.get('errors') or []
+                    for e in errs:
+                        msg = e.get('msg') or e.get('message') or ''
+                        code = e.get('code')
+                        if code == 40001 or ('access denied' in str(msg).lower()):
+                            raise Exception('Cookie失效或账号被临时限制(40001)')
+                except Exception as ex:
+                    raise ex
             return data
         except Exception as e:
             logger.error(f"Request failed: {e}")
@@ -103,16 +145,16 @@ class LibService:
 
     # --- Reserve ---
     def reserve_seat(self, lib_id: int, seat_key: str):
-        # 1. Lib Layout (Check if needed?)
-        lib_payload = {
-            "operationName": "libLayout",
-            "query": "query libLayout($libId: Int, $libType: Int) {\n userAuth {\n reserve {\n libs(libType: "
-                     "$libType, libId: $libId) {\n lib_id\n }\n }\n }\n}",
-            "variables": {"libId": lib_id}
-        }
-        self._post(lib_payload) # Just call it as in original code
+        if lib_id not in self._lib_layout_seen:
+            lib_payload = {
+                "operationName": "libLayout",
+                "query": "query libLayout($libId: Int, $libType: Int) {\n userAuth {\n reserve {\n libs(libType: "
+                         "$libType, libId: $libId) {\n lib_id\n }\n }\n }\n}",
+                "variables": {"libId": lib_id}
+            }
+            self._post(lib_payload)
+            self._lib_layout_seen.add(lib_id)
 
-        # 2. Reserve
         reserve_payload = {
             "operationName": "reserueSeat",
             "query": "mutation reserueSeat($libId: Int!, $seatKey: String!, $captchaCode: String, $captcha: "
@@ -162,8 +204,8 @@ class LibService:
         try:
             index_payload = {
                 "operationName": "index",
-                "query": "query index($pos: String!) { userAuth { reserve { reserve { status lib_id seat_key } } } }",
-                "variables": {"pos": "App-首页"}
+                "query": "query index { userAuth { reserve { reserve { status lib_id seat_key } } } }",
+                "variables": {}
             }
             r = self._post(index_payload)
             return r.get('data', {}).get('userAuth', {}).get('reserve', {}).get('reserve')
@@ -222,12 +264,16 @@ class LibService:
             'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits'
         })
         
+        start = time.time()
         async with websockets.connect(self.WS_URL, extra_headers=socket_headers) as websocket:
             while True:
                 await websocket.send('{"ns":"prereserve/queue","msg":""}')
                 response = await websocket.recv()
-                if 'u6392' in response: # "排队" unicode?
+                if 'u6392' in response or 'success' in response:
                     break
+                await asyncio.sleep(0.8)
+                if time.time() - start > 150:
+                    raise Exception('队列等待超时')
     
     def prereserve_seat(self, lib_id: int, seat_key: str):
         # 1. Check Msg
@@ -262,6 +308,16 @@ class LibService:
         else:
             raise Exception(f"Prereserve Check Failed: {msg}")
 
+    def refresh_page(self):
+        try:
+            self._post({
+                "operationName": "index",
+                "query": "query index { userAuth { currentUser { user_id } prereserve { prereserveCheckMsg } } }",
+                "variables": {}
+            })
+        except Exception:
+            pass
+
     # --- Check In (Integral) ---
     def check_in_integral(self):
         list_payload = {
@@ -290,8 +346,8 @@ class LibService:
         # Check status first
         index_payload = {
             "operationName": "index",
-            "query": "query index($pos: String!) { userAuth { reserve { reserve { status } } } }",
-            "variables": {"pos": "App-首页"}
+            "query": "query index { userAuth { reserve { reserve { status } } } }",
+            "variables": {}
         }
         r = self._post(index_payload)
         status = r.get('data', {}).get('userAuth', {}).get('reserve', {}).get('reserve', {}).get('status')
@@ -309,8 +365,8 @@ class LibService:
     def withdraw_seat(self):
         index_payload = {
             "operationName": "index",
-            "query": "query index($pos: String!) { userAuth { reserve { getSToken } } }",
-            "variables": {"pos": "App-首页"}
+            "query": "query index { userAuth { reserve { getSToken } } }",
+            "variables": {}
         }
         r = self._post(index_payload)
         token = r.get('data', {}).get('userAuth', {}).get('reserve', {}).get('getSToken')

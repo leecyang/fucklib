@@ -50,9 +50,15 @@ def run_seat_task(user_id: int, task_id: int):
 
         last_error = None
         success = False
+        attempt = 0
         
         for seat in target_seats:
             try:
+                if attempt % 2 == 0:
+                    try:
+                        service.refresh_page()
+                    except Exception:
+                        pass
                 if task.task_type == 'seat_today':
                     service.reserve_seat(seat['lib_id'], seat['seat_key'])
                 elif task.task_type == 'seat_tomorrow':
@@ -60,8 +66,13 @@ def run_seat_task(user_id: int, task_id: int):
                 success = True
                 break # Stop if success
             except Exception as e:
+                msg = str(e).lower()
                 last_error = e
-                continue # Try next
+                if '40001' in msg or '403' in msg or 'cookie失效或账号被临时限制' in msg:
+                    raise e
+                continue
+            finally:
+                attempt += 1
         
         if success:
             task.last_status = 'success'
@@ -92,6 +103,12 @@ def run_signin_task(user_id: int, task_id: int):
                 task.last_status = 'failed'
                 task.last_message = '用户未绑定微信 SessID'
              return
+
+        try:
+            if user.wechat_config.cookie:
+                LibService(user.wechat_config.cookie).refresh_page()
+        except Exception:
+            pass
 
         res = AuthService.sign_in(user.wechat_config.sess_id, user.wechat_config.major, user.wechat_config.minor)
         task.last_status = 'success'

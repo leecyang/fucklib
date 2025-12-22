@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import api from '../api/client';
+import api, { libApi } from '../api/client';
 
 export default function Settings() {
   const [config, setConfig] = useState<any>({ major: '', minor: '' });
   const [authUrl, setAuthUrl] = useState('');
   const [sessUrl, setSessUrl] = useState('');
   const [msg, setMsg] = useState('');
+  const [userInfo, setUserInfo] = useState<any>(null);
 
   useEffect(() => {
     loadConfig();
@@ -15,6 +16,17 @@ export default function Settings() {
     try {
       const res = await api.get('/library/config');
       setConfig(res.data);
+      if (res.data?.cookie) {
+        try {
+          const userRes = await libApi.getUserInfo();
+          setUserInfo(userRes.data.currentUser);
+        } catch (e) {
+          console.error('获取用户信息失败', e);
+          setUserInfo(null);
+        }
+      } else {
+        setUserInfo(null);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -49,6 +61,22 @@ export default function Settings() {
       <h1 className="text-3xl font-bold text-gray-800">设置中心</h1>
       
       {msg && <div className="bg-blue-100 text-blue-700 p-3 rounded">{msg}</div>}
+
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-xl font-semibold mb-4">账号限制</h2>
+        {config?.cookie ? (
+          userInfo?.user_deny?.deny_deadline ? (
+            <div className="text-gray-700">
+              <span className="font-semibold">禁止预约截止：</span>
+              <span className="font-mono">{userInfo.user_deny.deny_deadline}</span>
+            </div>
+          ) : (
+            <div className="text-green-700">当前无预约限制</div>
+          )
+        ) : (
+          <div className="text-gray-500">请先更新微信 Cookie 后查看账号限制信息</div>
+        )}
+      </div>
 
       <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
         <h2 className="text-xl font-semibold mb-4">微信授权与扫码链接</h2>

@@ -86,7 +86,16 @@ class AuthService:
         
         try:
             r = requests.post(url=sign_url, data=datas, headers=headers)
-            msg = r.json()
+            if r.status_code == 403:
+                raise Exception('Forbidden(403) 打卡被阻止')
+            msg = {}
+            try:
+                msg = r.json()
+            except Exception:
+                pass
+            code = msg.get('code')
+            if code == 403 or str(code) == '403':
+                raise Exception('Forbidden(403) 打卡被阻止')
             return msg.get('msg', r.text)
         except Exception as e:
             raise Exception(f"Sign in request failed: {e}")
