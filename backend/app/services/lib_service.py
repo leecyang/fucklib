@@ -178,12 +178,22 @@ class LibService:
             "query": "mutation cancelReserve{cancelReserve{success msg}}",
             "variables": {}
         }
-        res = self._post(payload)
-        if 'errors' in res:
-            # Fallback to withdraw logic if this API doesn't work as expected or is same as withdraw
-            # The doc says "cancelReserve" (API 8).
-            raise Exception(res['errors'][0].get('message', 'Cancel Failed'))
-        return res.get('data', {}).get('cancelReserve')
+        try:
+            res = self._post(payload)
+            if 'errors' in res:
+                # Try sToken-based fallback
+                if self.withdraw_seat():
+                    return {"success": True, "msg": "Withdraw via sToken succeeded"}
+                raise Exception(res['errors'][0].get('message', 'Cancel Failed'))
+            return res.get('data', {}).get('cancelReserve')
+        except Exception as e:
+            # Network/GraphQL error, attempt fallback
+            try:
+                if self.withdraw_seat():
+                    return {"success": True, "msg": "Withdraw via sToken succeeded"}
+            except Exception:
+                pass
+            raise e
 
     def get_reserve_info(self):
         # First try API 9
