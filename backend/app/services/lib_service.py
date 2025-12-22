@@ -1,6 +1,7 @@
 import requests
 import random
 import time
+from datetime import datetime
 import json
 import asyncio
 import websockets
@@ -228,6 +229,19 @@ class LibService:
             # 2. Check seat_key
             if not reserve_data.get('seat_key'):
                 return None
+
+            # 3. Check date (Ignore past reservations)
+            # If the reservation date is strictly before today, it's a stale record.
+            date_str = reserve_data.get('date')
+            if date_str:
+                try:
+                    res_date = datetime.strptime(str(date_str), "%Y-%m-%d").date()
+                    today = datetime.now().date()
+                    if res_date < today:
+                        logger.info(f"Ignoring past reservation for {date_str} (Status: {status})")
+                        return None
+                except Exception as e:
+                    logger.warning(f"Date parse failed: {e}")
 
             # Note: Do not check expiration locally. Trust the server's status.
             # If status is active, the seat is ours even if local time > exp_date.
