@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom';
-import { BookOpen, Settings, LogOut, Map, Calendar, Shield } from 'lucide-react';
+import { BookOpen, Settings, LogOut, Map, Calendar } from 'lucide-react';
 
 export default function Layout() {
   const navigate = useNavigate();
