@@ -200,7 +200,9 @@ export default function Dashboard() {
                             <span className="font-medium text-slate-700">
                                 {t.task_type === 'signin' ? '蓝牙签到' : '预约'}
                             </span>
-                            <span className="font-mono text-xs text-slate-400">{t.cron_expression}</span>
+                            <span className="font-mono text-xs text-slate-400">
+                                {t.cron_expression.split(' ').slice(0, 2).reverse().map(x => x.padStart(2, '0')).join(':')}
+                            </span>
                         </div>
                         {/* Progress Bar Simulation */}
                         <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
