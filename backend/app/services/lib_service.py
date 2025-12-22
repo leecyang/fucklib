@@ -233,7 +233,9 @@ class LibService:
             # 3. Check date (Ignore past reservations)
             # If the reservation date is strictly before today, it's a stale record.
             date_str = reserve_data.get('date')
-            if date_str:
+            if not date_str or str(date_str).strip() == '':
+                return None
+            else:
                 try:
                     res_date = datetime.strptime(str(date_str), "%Y-%m-%d").date()
                     today = datetime.now().date()

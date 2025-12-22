@@ -29,13 +29,9 @@ def run_seat_task(user_id: int, task_id: int):
         try:
             reserve = service.get_reserve_info()
             if reserve:
-                # prefer getReserveInfo payload structure
-                date = reserve.get('date')
-                seat_key = reserve.get('seatKey') or reserve.get('seat_key')
-                if seat_key and (not date or str(date).strip() != ''):
-                    task.last_status = 'skipped'
-                    task.last_message = '用户当前已有预约，跳过任务'
-                    return
+                task.last_status = 'skipped'
+                task.last_message = '用户当前已有预约，跳过任务'
+                return
             else:
                 logger.info("No current reserve info, continue seat task.")
         except Exception as e:
