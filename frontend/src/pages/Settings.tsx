@@ -10,6 +10,8 @@ export default function Settings() {
   const [sessUrl, setSessUrl] = useState('');
   const [dialog, setDialog] = useState<{ title: string; body: string; variant: 'success' | 'error' | 'info' } | null>(null);
   const [wechatUserInfo, setWechatUserInfo] = useState<any>(null);
+  const [userInfoError, setUserInfoError] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(false);
   const [invites, setInvites] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const navigate = useNavigate();
@@ -26,12 +28,17 @@ export default function Settings() {
       
       // 2. Get Wechat User Info if cookie exists
       if (res.data?.cookie) {
+        setLoadingUser(true);
+        setUserInfoError(false);
         try {
           const userRes = await libApi.getUserInfo();
           setWechatUserInfo(userRes.data.currentUser);
         } catch (e) {
           console.error('获取用户信息失败', e);
           setWechatUserInfo(null);
+          setUserInfoError(true);
+        } finally {
+          setLoadingUser(false);
         }
       } else {
         setWechatUserInfo(null);
@@ -133,7 +140,17 @@ export default function Settings() {
             账号状态
         </h2>
         {config?.cookie ? (
-          (wechatUserInfo?.currentUser?.user_deny) ? (
+          loadingUser ? (
+            <div className="bg-slate-50 border border-slate-100 p-4 rounded-lg text-slate-500 flex items-center gap-2 animate-pulse">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>正在获取账号状态...</span>
+            </div>
+          ) : userInfoError ? (
+            <div className="bg-amber-50 border border-amber-100 p-4 rounded-lg text-amber-700 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                <span>无法获取账号状态，Cookie 可能已失效或被封禁，请重新配置。</span>
+            </div>
+          ) : (wechatUserInfo?.currentUser?.user_deny) ? (
             <div className="bg-rose-50 border border-rose-100 p-4 rounded-lg text-rose-700 animate-pulse">
               <span className="font-semibold block mb-1">⚠️ 当前账号存在预约限制</span>
               <span className="text-sm">解除时间：<span className="font-mono font-bold text-lg">{wechatUserInfo.currentUser.user_deny.deny_deadline || '无法获取/未知'}</span></span>
