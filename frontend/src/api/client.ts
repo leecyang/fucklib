@@ -28,11 +28,13 @@ api.interceptors.response.use(
     } else if (status === 403 || status === 500 || msg.includes('40001') || msg.includes('access denied') || msg.includes('临时限制')) {
       // Handle 500 errors that might contain JSON in detail (Flask behavior)
       let isBan = false;
-      if (msg.includes('异常预约') || detail.includes('异常预约')) {
+      const detailStr = String(detail);
+      
+      if (msg.includes('异常预约') || detailStr.includes('异常预约')) {
           isBan = true;
       } else if (Array.isArray(error?.response?.data?.errors)) {
           isBan = error.response.data.errors.some((e: any) => e.code === 1);
-      } else if (typeof detail === 'string' && (detail.includes('异常预约') || detail.includes('"code": 1') || detail.includes("'code': 1"))) {
+      } else if (detailStr.includes('"code": 1') || detailStr.includes("'code': 1")) {
           // Sometimes 500 error detail is a stringified Python list/dict
           isBan = true;
       }

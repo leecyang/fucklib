@@ -132,10 +132,13 @@ class LibService:
         
         # DEBUG: Log raw userAuth data for troubleshooting ban status
         user_auth_raw = (data.get('data') or {}).get('userAuth')
-        if user_auth_raw and 'user_deny' in user_auth_raw:
-             logger.info(f"DEBUG: Fetched user_deny info: {user_auth_raw['user_deny']}")
+        if user_auth_raw:
+             if 'user_deny' in user_auth_raw:
+                  logger.info(f"DEBUG: Fetched user_deny info: {user_auth_raw['user_deny']}")
+             else:
+                  logger.info("DEBUG: user_deny field is missing in userAuth object")
         else:
-             logger.info("DEBUG: user_deny info not found in response")
+             logger.info("DEBUG: userAuth object not found in response data")
 
         if 'errors' in data:
             raise Exception(data['errors'][0].get('message', 'Unknown API Error'))
