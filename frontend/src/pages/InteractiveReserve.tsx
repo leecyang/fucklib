@@ -10,6 +10,8 @@ const InteractiveReserve: React.FC = () => {
   const [libsError, setLibsError] = useState<string | null>(null);
   const [seatsError, setSeatsError] = useState<string | null>(null);
   const [frequent, setFrequent] = useState<any[]>([]);
+  const [selectedSeatKey, setSelectedSeatKey] = useState<string | null>(null);
+  const [selectedSeatName, setSelectedSeatName] = useState<string | null>(null);
   const [frequentStatus, setFrequentStatus] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -70,6 +72,8 @@ const InteractiveReserve: React.FC = () => {
     setSeats(null);
     setLoading(true);
     setSeatsError(null);
+    setSelectedSeatKey(null);
+    setSelectedSeatName(null);
     try {
       const res = await libApi.getLayout(libId);
       if (!res.data || !res.data.lib_layout || !Array.isArray(res.data.lib_layout.seats)) {
@@ -99,6 +103,14 @@ const InteractiveReserve: React.FC = () => {
       alert('预约失败: ' + (err.response?.data?.detail || err.message));
     }
   };
+  
+  const handleReserveSelected = async () => {
+    if (!selectedLib || !selectedSeatKey) {
+      alert('请先在上方选择座位');
+      return;
+    }
+    await handleReserve(selectedSeatKey);
+  };
 
   const handleCancel = async () => {
       if(!confirm('确认取消预约吗？')) return;
@@ -121,18 +133,25 @@ const InteractiveReserve: React.FC = () => {
                   const statusCode = reserveInfo?.status;
                   const isSeated = statusCode === 3;
                   const isNotSigned = isMine && !isSeated;
+                  const isSelected = selectedSeatKey === seat.key;
                   return (
                     <div 
                         key={seat.key} 
                         className={`
                             p-2 text-center border rounded text-sm transition-colors
-                            ${isMine && isSeated ? 'bg-blue-200 border-blue-400 text-blue-900'
+                            ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-400 text-blue-900'
+                              : isMine && isSeated ? 'bg-blue-200 border-blue-400 text-blue-900'
                               : isNotSigned ? 'bg-green-200 border-green-400 text-green-900'
                               : isFree ? 'bg-white hover:bg-gray-50 border-gray-300 cursor-pointer text-gray-800'
                               : 'bg-red-50 border-red-200 text-gray-400'}
                         `}
-                        onClick={() => isFree && !isMine && handleReserve(seat.key)}
-                        title={`Status: ${seat.status}, Type: ${seat.type}`}
+                        onClick={() => {
+                          if (!isMine) {
+                            setSelectedSeatKey(seat.key);
+                            setSelectedSeatName(seat.name);
+                          }
+                        }}
+                        title={`状态: ${seat.status === 1 ? '可预约' : '不可预约'}`}
                     >
                         {seat.name}
                     </div>
@@ -213,6 +232,37 @@ const InteractiveReserve: React.FC = () => {
                    座位分布
               </h4>
               {renderSeats(seats)}
+              <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t pt-4">
+                <div className="text-sm text-gray-600">
+                  {selectedSeatKey ? (
+                    <>已选择座位：<span className="font-mono font-bold">{selectedSeatName}</span></>
+                  ) : (
+                    <>请点击上方座位进行选择</>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleReserveSelected}
+                    disabled={!selectedSeatKey}
+                    className={`px-4 py-2 rounded shadow ${selectedSeatKey ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+                  >
+                    预约
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await libApi.signin();
+                        alert(res.data?.message || '已发起签到');
+                      } catch (err: any) {
+                        alert('签到失败: ' + (err.response?.data?.detail || err.message));
+                      }
+                    }}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 shadow"
+                  >
+                    蓝牙签到
+                  </button>
+                </div>
+              </div>
           </div>
       )}
       {!loading && seats && seats.length === 0 && (
@@ -244,21 +294,6 @@ const InteractiveReserve: React.FC = () => {
         ) : (
           <div className="text-gray-500 text-sm">未配置常用座位或无法获取</div>
         )}
-        <div className="mt-4">
-          <button
-            onClick={async () => {
-              try {
-                const res = await libApi.signin();
-                alert(res.data?.message || '已发起签到');
-              } catch (err: any) {
-                alert('签到失败: ' + (err.response?.data?.detail || err.message));
-              }
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow"
-          >
-            蓝牙签到
-          </button>
-        </div>
       </div>
     </div>
   );
