@@ -10,7 +10,6 @@ export default function Settings() {
   const [sessUrl, setSessUrl] = useState('');
   const [dialog, setDialog] = useState<{ title: string; body: string; variant: 'success' | 'error' | 'info' } | null>(null);
   const [wechatUserInfo, setWechatUserInfo] = useState<any>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [invites, setInvites] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const navigate = useNavigate();
@@ -44,7 +43,6 @@ export default function Settings() {
         // Need to import authApi first or use api.get('/auth/me')
         const meRes = await api.get('/auth/me');
         const me = meRes.data;
-        setCurrentUser(me);
 
         if (me.is_admin) {
            const inv = await adminApi.getInvites();

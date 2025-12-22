@@ -171,9 +171,21 @@ class LibService:
             }
         }
         res = self._post(reserve_payload)
+
+        # Do not trust reserveSeat error messages. Always trust index status.
+        time.sleep(0.5)
+        reserve_info = self.get_reserve_info()
+        if reserve_info:
+            r_lib_id = reserve_info.get('lib_id')
+            r_seat_key = reserve_info.get('seat_key')
+            # Check if reserved seat matches requested (handle string/int conversion safely)
+            if str(r_lib_id) == str(lib_id) and str(r_seat_key) == str(seat_key):
+                return True
+
         if 'errors' in res:
             raise Exception(res['errors'][0].get('message', 'Reserve Failed'))
-        return True
+        
+        raise Exception('预约失败：系统未确认座位，请稍后重试')
 
     def cancel_reserve(self):
         payload = {
