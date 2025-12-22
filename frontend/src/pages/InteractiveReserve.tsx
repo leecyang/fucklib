@@ -13,6 +13,7 @@ const InteractiveReserve: React.FC = () => {
   const [selectedSeatKey, setSelectedSeatKey] = useState<string | null>(null);
   const [selectedSeatName, setSelectedSeatName] = useState<string | null>(null);
   const [frequentStatus, setFrequentStatus] = useState<Record<string, boolean>>({});
+  const [reserveSeatName, setReserveSeatName] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLibs();
@@ -40,6 +41,20 @@ const InteractiveReserve: React.FC = () => {
       try {
           const res = await libApi.getReserveInfo();
           setReserveInfo(res.data);
+          try {
+            const libId = res.data?.lib_id || res.data?.libId;
+            const seatKey = res.data?.seat_key || res.data?.seatKey;
+            if (libId && seatKey) {
+              const layout = await libApi.getLayout(libId);
+              const seatList = layout.data?.lib_layout?.seats || [];
+              const found = seatList.find((s: any) => s.key === seatKey);
+              setReserveSeatName(found?.name || seatKey || null);
+            } else {
+              setReserveSeatName(null);
+            }
+          } catch {
+            setReserveSeatName(null);
+          }
       } catch (err) {
           console.error(err);
       }
@@ -176,16 +191,7 @@ const InteractiveReserve: React.FC = () => {
                         const seatKey = reserveInfo.seat_key || reserveInfo.seatKey;
                         const lib = libs.find(l => l.id === libId);
                         const floor = lib ? (lib.name.split(' - ')[1] || lib.name) : libId;
-                        const fetchSeatFromLayout = (sid: number, skey: string): { name?: string, status?: number } => {
-                          // Prefer current seats if same lib
-                          if (selectedLib === sid && Array.isArray(seats)) {
-                            const found = seats.find(s => s.key === skey);
-                            if (found) return { name: found.name, status: found.status };
-                          }
-                          return {};
-                        };
-                        const info = fetchSeatFromLayout(libId, seatKey);
-                        const seatName = info.name || seatKey;
+                        const seatName = reserveSeatName || (selectedLib === libId && Array.isArray(seats) ? (seats.find(s => s.key === seatKey)?.name || seatKey) : seatKey);
                         const statusText = reserveInfo.status === 3 ? '已入座' : '未签到';
                         return (
                           <>
