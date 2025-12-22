@@ -133,10 +133,13 @@ class LibService:
         # DEBUG: Log raw userAuth data for troubleshooting ban status
         user_auth_raw = (data.get('data') or {}).get('userAuth')
         if user_auth_raw:
-             if 'user_deny' in user_auth_raw:
-                  logger.info(f"DEBUG: Fetched user_deny info: {user_auth_raw['user_deny']}")
+             # Try to access user_deny directly
+             if 'currentUser' in user_auth_raw and 'user_deny' in user_auth_raw['currentUser']:
+                  logger.info(f"DEBUG: Fetched user_deny info from currentUser: {user_auth_raw['currentUser']['user_deny']}")
+             elif 'user_deny' in user_auth_raw: # Check if it's at root level (unlikely based on schema but possible)
+                  logger.info(f"DEBUG: Fetched user_deny info from root: {user_auth_raw['user_deny']}")
              else:
-                  logger.info("DEBUG: user_deny field is missing in userAuth object")
+                  logger.info("DEBUG: user_deny field is missing in both currentUser and root userAuth object")
         else:
              logger.info("DEBUG: userAuth object not found in response data")
 
