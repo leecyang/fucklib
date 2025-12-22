@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { alert } from '../components/Dialog';
 
 const api = axios.create({
   baseURL: '/api',
@@ -22,9 +23,9 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     } else if (msg.includes('无法解析学号')) {
-      alert('无法解析学号，请前往公众号检查是否已登录“我去图书馆”小程序');
+      alert('无法解析学号，请前往公众号检查是否已登录“我去图书馆”小程序', '绑定失败');
     } else if (msg.includes('40005') || msg.includes('绑定学号')) {
-      alert('请先在微信端绑定学号，并在设置中更新 Cookie');
+      alert('请先在微信端绑定学号，并在设置中更新 Cookie', '需要绑定学号');
     } else if (status === 403 || status === 500 || msg.includes('40001') || msg.includes('access denied') || msg.includes('临时限制')) {
       // Handle 500 errors that might contain JSON in detail (Flask behavior)
       let isBan = false;
@@ -40,12 +41,50 @@ api.interceptors.response.use(
       }
 
       if (isBan) {
-          alert('您因尝试预约非法座位导致账号被封禁');
+          alert('您因尝试预约非法座位导致账号被封禁', '账号被封禁');
           // Force refresh user info to show ban status in settings
           libApi.getUserInfo().catch(console.error);
       } else if (status !== 500) {
-          alert('会话受限或被拒绝，请刷新 Cookie / SessID 或稍后再试');
+          alert('会话受限或被拒绝，请刷新 Cookie / SessID 或稍后再试', '会话受限');
+      } else {
+          // Map common backend errors to Chinese
+          let displayMsg = detailStr;
+          let title = '系统错误';
+
+          if (detailStr.includes('Reserve Failed') || detailStr.includes('Fatal Reverse') || detailStr.includes('系统未确认座位')) {
+              displayMsg = '预约失败：系统未确认座位，请稍后重试。这通常是因为座位已被他人抢占。';
+              title = '预约失败';
+          } else if (detailStr.includes('Prereserve Failed')) {
+              displayMsg = '预选失败，请稍后重试';
+              title = '预选失败';
+          } else if (detailStr.includes('Cancel Failed')) {
+              displayMsg = '取消失败，请刷新页面后重试';
+              title = '取消失败';
+          } else if (detailStr.includes('Unknown API Error')) {
+              displayMsg = '未知 API 错误，请稍后重试';
+          }
+
+          // Truncate if still too long
+          if (displayMsg.length > 200) {
+              displayMsg = displayMsg.substring(0, 200) + '...';
+          }
+
+          alert(displayMsg, title);
       }
+    } else {
+        // Generic errors
+        if (detail) {
+            let displayMsg = String(detail);
+            let title = '请求错误';
+            
+            // Map generic errors if they appear here
+             if (displayMsg.includes('Reserve Failed') || displayMsg.includes('Fatal Reverse')) {
+                  displayMsg = '预约失败：系统未确认座位，请稍后重试。';
+                  title = '预约失败';
+             }
+
+            alert(displayMsg, title);
+        }
     }
     return Promise.reject(error);
   }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { libApi, type Lib, type Seat } from '../api/client';
 import { cn } from '../lib/utils';
 import { MapPin, Bluetooth, Check, X, Clock, AlertCircle } from 'lucide-react';
+import { confirm, alert } from '../components/Dialog';
 
 const InteractiveReserve: React.FC = () => {
   // ==================================================================================
@@ -146,38 +147,74 @@ const InteractiveReserve: React.FC = () => {
       const nowMin = now.getHours() * 60 + now.getMinutes();
       const within = c >= o ? (nowMin >= o && nowMin <= c) : (nowMin >= o || nowMin <= c);
       if (!within) {
-        alert(`当前楼层不在可预约时间段（${openStr} - ${closeStr}）`);
+        alert(`当前楼层不在可预约时间段（${openStr} - ${closeStr}）`, '非开放时间');
         return;
       }
     }
-    if (!confirm(`确认预约座位 ${seatKey} 吗？`)) return;
+    
+    // Parse seat key to seat number if possible (Format usually 'X,Y' or similar, but we want the logical name)
+    // Actually seatKey is the ID. We try to find the name.
+    let displayName = seatKey;
+    if (selectedLib && seats) {
+        const found = seats.find(s => s.key === seatKey);
+        if (found) displayName = found.name;
+    }
+    
+    // Fallback if seat name is not found in current loaded seats (e.g. quick reserve)
+    if (displayName === seatKey && frequentNames[selectedLib + ':' + seatKey]) {
+        displayName = frequentNames[selectedLib + ':' + seatKey];
+    }
+
+    const confirmed = await confirm(
+        <div className="space-y-2">
+            <p>您即将预约：</p>
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 font-medium text-slate-700">
+                 {libs.find(l => l.id === selectedLib)?.name} <br/>
+                 <span className="text-indigo-600 font-bold text-lg">{displayName} 号座</span>
+            </div>
+            <p className="text-xs text-slate-400">请确保您能按时签到，违约将影响账号信用。</p>
+        </div>,
+        '确认预约'
+    );
+    
+    if (!confirmed) return;
+
     try {
       await libApi.reserveSeat(selectedLib, seatKey);
-      alert('预约成功');
+      await alert('预约成功！请在规定时间内前往签到。', '预约成功');
       fetchReserveInfo();
       handleLibChange(selectedLib);
     } catch (err: any) {
-      alert('预约失败: ' + (err.response?.data?.detail || err.message));
+      // Error handling is delegated to client.ts interceptor for global errors,
+      // but if it slips through or is a specific logic error:
+      console.error(err);
+      // Don't alert here if client.ts already did it. 
+      // However, client.ts throws error, so we might catch it here.
+      // We can check if it was handled? No easy way. 
+      // But we can let client.ts handle the UI and just log here.
+      // Or we can rely on our new alert.
+      // Let's rely on interceptor for standard errors, but if we want specific UI:
+      // Actually, standardizing on client.ts interceptor using our new Dialog is better.
     }
   };
   
   const handleReserveSelected = async () => {
     if (!selectedLib || !selectedSeatKey) {
-      alert('请先在上方选择座位');
+      alert('请先在上方选择座位', '未选择座位');
       return;
     }
     await handleReserve(selectedSeatKey);
   };
 
   const handleCancel = async () => {
-      if(!confirm('确认取消预约吗？')) return;
+      if(!await confirm('确定要取消当前的座位预约吗？取消后座位将被释放。', '取消预约')) return;
       try {
           await libApi.cancelReserve();
-          alert('取消成功');
+          await alert('预约已取消', '取消成功');
           setReserveInfo(null);
           if (selectedLib) handleLibChange(selectedLib);
       } catch (err: any) {
-          alert('取消失败: ' + (err.response?.data?.detail || err.message));
+         // Interceptor handles
       }
   }
   // ==================================================================================
