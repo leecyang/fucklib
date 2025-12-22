@@ -153,9 +153,6 @@ const InteractiveReserve: React.FC = () => {
               {seatList.map(seat => {
                   const isFree = seat.status === 1;
                   const isMine = reserveInfo && (reserveInfo.seat_key ? reserveInfo.seat_key === seat.key : reserveInfo?.seatKey === seat.key);
-                  const statusCode = reserveInfo?.status;
-                  const isSeated = statusCode === 3;
-                  const isNotSigned = isMine && !isSeated;
                   const isSelected = selectedSeatKey === seat.key;
 
                   // Modern Visual Map Logic

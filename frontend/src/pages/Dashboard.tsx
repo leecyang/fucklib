@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api, { libApi, taskApi, type Task, type Lib } from '../api/client';
-import { User, CreditCard, School, CheckCircle, XCircle, Clock, MapPin, Zap } from 'lucide-react';
+import { User, School, CheckCircle, XCircle, Clock, MapPin, Zap } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
 
