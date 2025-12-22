@@ -211,7 +211,11 @@ class LibService:
                 "variables": {}
             }
             r = self._post(index_payload)
-            return ((r.get('data') or {}).get('userAuth') or {}).get('reserve', {}).get('reserve')
+            reserve_data = ((r.get('data') or {}).get('userAuth') or {}).get('reserve', {}).get('reserve')
+            # Fix: Check if seat_key is present to avoid returning dict with all None values
+            if reserve_data and reserve_data.get('seat_key'):
+                return reserve_data
+            return None
         except Exception as e:
             logger.error(f"get_reserve_info failed: {e}")
             return None
