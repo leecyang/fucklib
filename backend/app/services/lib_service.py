@@ -229,16 +229,8 @@ class LibService:
             if not reserve_data.get('seat_key'):
                 return None
 
-            # 3. Check expiration
-            exp_date = reserve_data.get('exp_date')
-            if exp_date is not None:
-                try:
-                    # Ensure comparison is valid (time.time() is float, exp_date should be int/float)
-                    if time.time() > float(exp_date):
-                        return None
-                except (ValueError, TypeError):
-                    # If exp_date format is unexpected, ignore expiration check or log warning
-                    pass
+            # Note: Do not check expiration locally. Trust the server's status.
+            # If status is active, the seat is ours even if local time > exp_date.
 
             return reserve_data
         except Exception as e:
