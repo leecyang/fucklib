@@ -211,7 +211,9 @@ export default function Settings() {
           <Save className="w-4 h-4" /> 保存配置
         </button>
         <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-          提示：安卓可安装 nRF Connect（下载链接：<span className="break-all">https://wwn.lanzouj.com/iV9mw03eqzsh</span>），靠近图书馆打卡设备，在列表找到 iBeacon 项查看其 UUID、Major、Minor；苹果可在 App Store 安装「Beacon服务」应用，设置 UUID 为
+          提示：<br />
+          安卓可安装 nRF Connect（下载链接：<span className="break-all">https://wwn.lanzouj.com/iV9mw03eqzsh</span>），靠近图书馆打卡设备，在列表找到 iBeacon 项查看其 UUID、Major、Minor。<br />
+          苹果可在 App Store 安装「Beacon服务」应用，设置 UUID 为
           <span className="break-all"> FDA50693-A4E2-4FB1-AFCF-C6EB07647825 </span>
           后在设备列表查看对应的 Major / Minor 数值并填入上方。
         </p>
