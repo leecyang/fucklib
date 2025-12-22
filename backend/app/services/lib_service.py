@@ -267,7 +267,7 @@ class LibService:
     def get_lib_list(self):
         payload = {
             "operationName": "list",
-            "query": "query list { userAuth { reserve { libs { lib_id lib_name lib_floor is_open } } } }",
+            "query": "query list { userAuth { reserve { libs(libType: -1) { lib_id lib_name lib_floor is_open lib_rt { seats_total seats_has open_time_str close_time_str advance_booking } } } } }",
             "variables": {}
         }
         try:
@@ -278,7 +278,10 @@ class LibService:
                 result.append({
                     "id": lib.get('lib_id'),
                     "name": f"{lib.get('lib_name')} - {lib.get('lib_floor')}",
-                    "status": 1 if lib.get('is_open') else 0
+                    "status": 1 if lib.get('is_open') else 0,
+                    "open_time_str": ((lib.get('lib_rt') or {}) or {}).get('open_time_str'),
+                    "close_time_str": ((lib.get('lib_rt') or {}) or {}).get('close_time_str'),
+                    "advance_booking": ((lib.get('lib_rt') or {}) or {}).get('advance_booking'),
                 })
             return result
         except Exception as e:

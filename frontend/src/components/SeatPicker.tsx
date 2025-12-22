@@ -76,15 +76,27 @@ const SeatPicker: React.FC<SeatPickerProps> = ({ onClose, onPick }) => {
           {!loading && seats.length > 0 && (
             <div className="grid grid-cols-5 sm:grid-cols-8 xl:grid-cols-10 gap-2">
               {seats.map(seat => {
-                const isFree = (seat as any).seat_status === 1 || seat.status === 1;
+                const libObj = selectedLib ? libs.find(l => l.id === selectedLib) : null;
+                const openStr = libObj?.open_time_str;
+                const closeStr = libObj?.close_time_str;
+                const toMin = (s: string) => {
+                  const [h, m] = s.split(':').map((x) => parseInt(x, 10));
+                  return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+                };
+                const now = new Date();
+                const nowMin = now.getHours() * 60 + now.getMinutes();
+                const o = openStr ? toMin(openStr) : undefined;
+                const c = closeStr ? toMin(closeStr) : undefined;
+                const within = (o === undefined || c === undefined) ? true : (c >= o ? (nowMin >= o && nowMin <= c) : (nowMin >= o || nowMin <= c));
+                const isFree = ((seat as any).seat_status === 1 || seat.status === 1) && within;
                 return (
                   <button
                     key={seat.key}
                     className={`py-1 px-2 text-center border rounded text-xs transition-colors
                       ${isFree ? 'bg-white hover:bg-gray-50 border-gray-300 text-gray-800'
                       : 'bg-gray-100 border-gray-200 text-gray-500'}`}
-                    onClick={() => pickSeat(seat)}
-                    title={`状态: ${isFree ? '可预约' : '不可预约'}`}
+                    onClick={() => isFree && pickSeat(seat)}
+                    title={`状态: ${isFree ? '可预约' : (within ? '不可预约' : `闭馆 (${openStr || '-'} - ${closeStr || '-'})`)}`}
                   >
                     {seat.name}
                   </button>

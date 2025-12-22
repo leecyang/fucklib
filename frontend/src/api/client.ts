@@ -68,6 +68,9 @@ export interface Lib {
     id: number;
     name: string;
     status: number;
+    open_time_str?: string;
+    close_time_str?: string;
+    advance_booking?: string;
 }
 
 export interface Floor {

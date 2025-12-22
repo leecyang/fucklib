@@ -117,6 +117,24 @@ const InteractiveReserve: React.FC = () => {
 
   const handleReserve = async (seatKey: string) => {
     if (!selectedLib) return;
+    const libObj = libs.find(l => l.id === selectedLib);
+    const openStr = libObj?.open_time_str;
+    const closeStr = libObj?.close_time_str;
+    const toMin = (s: string) => {
+      const [h, m] = s.split(':').map((x) => parseInt(x, 10));
+      return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+    };
+    if (openStr && closeStr) {
+      const now = new Date();
+      const o = toMin(openStr);
+      const c = toMin(closeStr);
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const within = c >= o ? (nowMin >= o && nowMin <= c) : (nowMin >= o || nowMin <= c);
+      if (!within) {
+        alert(`当前楼层不在可预约时间段（${openStr} - ${closeStr}）`);
+        return;
+      }
+    }
     if (!confirm(`确认预约座位 ${seatKey} 吗？`)) return;
     try {
       await libApi.reserveSeat(selectedLib, seatKey);
@@ -152,6 +170,23 @@ const InteractiveReserve: React.FC = () => {
   // ==================================================================================
 
   const renderSeats = (seatList: Seat[]) => {
+      const libObj = selectedLib ? libs.find(l => l.id === selectedLib) : null;
+      const openStr = libObj?.open_time_str;
+      const closeStr = libObj?.close_time_str;
+      const isWithinWindow = (() => {
+        if (!openStr || !closeStr) return true;
+        const toMin = (s: string) => {
+          const [h, m] = s.split(':').map((x) => parseInt(x, 10));
+          return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+        };
+        const now = new Date();
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        const o = toMin(openStr);
+        const c = toMin(closeStr);
+        if (c >= o) return nowMin >= o && nowMin <= c;
+        // 跨日窗口（如 22:00-06:00）
+        return nowMin >= o || nowMin <= c;
+      })();
       return (
           <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3">
               {seatList.map(seat => {
@@ -179,15 +214,17 @@ const InteractiveReserve: React.FC = () => {
                             setSelectedSeatName(seat.name);
                           }
                         }}
-                        title={`${seat.name} (${((seat as any).seat_status === 1 || seat.status === 1) ? 'Available' : 'Unavailable'})`}
+                        title={`${seat.name} (${isWithinWindow ? ((seat as any).seat_status === 1 || seat.status === 1) ? 'Available' : 'Unavailable' : 'Closed'})`}
                     >
                         {seat.name}
                         {isMine && (
                             <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white"></div>
                         )}
                     </div>
-                  )
               })}
+          </div>
+      )
+  }
           </div>
       )
   }
