@@ -220,17 +220,31 @@ class LibService:
         raise Exception('预约失败：系统未确认座位，请稍后重试')
 
     def cancel_reserve(self):
-        payload = {
-            "operationName": "cancelReserve",
-            "query": "mutation cancelReserve{cancelReserve{success msg}}",
+        # Step 1: Get sToken from index
+        index_payload = {
+            "operationName": "index",
+            "query": "query index { userAuth { reserve { getSToken } } }",
             "variables": {}
+        }
+        r = self._post(index_payload)
+        token = r.get('data', {}).get('userAuth', {}).get('reserve', {}).get('getSToken')
+        
+        if not token:
+            raise Exception("无法获取取消凭证(sToken)，请重试")
+
+        # Step 2: Call reserveCancle
+        payload = {
+            "operationName": "reserveCancle",
+            "query": "mutation reserveCancle($sToken: String!) {\n userAuth {\n "
+                     "reserve {\n reserveCancle(sToken: $sToken) {\n "
+                     "timerange\n }\n }\n }\n}",
+            "variables": {"sToken": token}
         }
         res = self._post(payload)
         if 'errors' in res:
-            # Fallback to withdraw logic if this API doesn't work as expected or is same as withdraw
-            # The doc says "cancelReserve" (API 8).
             raise Exception(res['errors'][0].get('message', 'Cancel Failed'))
-        return res.get('data', {}).get('cancelReserve')
+        
+        return res.get('data', {}).get('userAuth', {}).get('reserve', {}).get('reserveCancle')
 
     def get_reserve_info(self):
         # API 9 (getReserveInfo) is unreliable when pre-selected seat is occupied by others
@@ -268,7 +282,13 @@ class LibService:
                 return None
             else:
                 try:
-                    res_date = datetime.strptime(str(date_str), "%Y-%m-%d").date()
+                    # Handle timestamp or date string
+                    d_str = str(date_str)
+                    if d_str.isdigit():
+                        res_date = datetime.fromtimestamp(int(d_str)).date()
+                    else:
+                        res_date = datetime.strptime(d_str, "%Y-%m-%d").date()
+                        
                     today = datetime.now().date()
                     if res_date < today:
                         logger.info(f"Ignoring past reservation for {date_str} (Status: {status})")
