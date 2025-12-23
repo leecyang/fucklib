@@ -53,12 +53,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routers
-app.include_router(auth.router)
-app.include_router(library.router)
-app.include_router(admin.router)
-app.include_router(tasks.router)
-app.include_router(cron.router)
+# Routers - 使用 /api 前缀匹配 Vercel 路由
+app.include_router(auth.router, prefix="/api")
+app.include_router(library.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
+app.include_router(tasks.router, prefix="/api")
+app.include_router(cron.router, prefix="/api")
 
 @app.on_event("startup")
 def startup_event():
