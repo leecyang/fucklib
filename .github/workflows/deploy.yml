@@ -1,4 +1,5 @@
 name: Deploy
+# Triggering release v1.0 deployment
 
 on:
   push:
