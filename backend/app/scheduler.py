@@ -77,22 +77,6 @@ def run_seat_task(user_id: int, task_id: int):
         attempt = 0
         
         for seat in target_seats:
-            # Check if target seat is free today
-            try:
-                layout = service.get_lib_layout(seat['lib_id'])
-                seats = layout.get('lib_layout', {}).get('seats', []) if layout else []
-                found = None
-                for st in seats:
-                    if st.get('key') == seat['seat_key']:
-                        found = st
-                        break
-                if found and found.get('status') != 1:
-                    logger.info(f"Seat {seat['seat_key']} in lib {seat['lib_id']} is occupied, skip.")
-                    continue
-            except Exception as e:
-                logger.warning(f"Check seat occupancy failed: {e}")
-                # If occupancy check fails, continue to attempt reservation rather than block
-                pass
             try:
                 if attempt % 2 == 0:
                     try:

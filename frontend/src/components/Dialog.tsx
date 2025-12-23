@@ -168,4 +168,35 @@ export const confirm = (message: React.ReactNode, title = '确认操作') => {
     });
 };
 
+export const promptInput = (opts: { title?: string; defaultValue?: string; placeholder?: string; maxLength?: number }) => {
+    const { title = '请输入', defaultValue = '', placeholder, maxLength = 500 } = opts || {};
+    return new Promise<string | null>((resolve) => {
+        let currentValue = defaultValue;
+        const InputContent: React.FC = () => {
+            const [val, setVal] = useState(defaultValue);
+            useEffect(() => { currentValue = val; }, [val]);
+            return (
+                <div className="space-y-3">
+                    <input
+                        value={val}
+                        onChange={(e) => setVal(e.target.value)}
+                        placeholder={placeholder}
+                        maxLength={maxLength}
+                        className="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    />
+                    <div className="text-xs text-slate-400">{val.length}/{maxLength}</div>
+                </div>
+            );
+        };
+        showDialog({
+            title,
+            content: <InputContent />,
+            confirmText: '保存',
+            cancelText: '取消',
+            onConfirm: () => resolve((currentValue || '').trim()),
+            onCancel: () => resolve(null),
+        });
+    });
+};
+
 export default Dialog;

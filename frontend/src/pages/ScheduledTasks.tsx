@@ -3,7 +3,7 @@ import { taskApi, type Task } from '../api/client';
 import SeatPicker from '../components/SeatPicker';
 import { cn } from '../lib/utils';
 import { Plus, Trash2, Clock, CheckCircle2, AlertCircle, Calendar, Bluetooth } from 'lucide-react';
-import { alert } from '../components/Dialog';
+import { alert, promptInput } from '../components/Dialog';
 
 const ScheduledTasks: React.FC = () => {
     // ==================================================================================
@@ -152,7 +152,7 @@ const ScheduledTasks: React.FC = () => {
     }
     
     const editRemark = async (task: Task) => {
-        const val = prompt('编辑备注（最多500字符）', task.remark || '');
+        const val = await promptInput({ title: '编辑备注', defaultValue: task.remark || '', placeholder: '例如：早八签到', maxLength: 500 });
         if (val === null) return;
         const trimmed = val.trim();
         if (trimmed.length > 500) {
