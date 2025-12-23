@@ -355,10 +355,13 @@ const InteractiveReserve: React.FC = () => {
          </div>
          
          {/* Status Indicators (Legend) */}
-         <div className="flex gap-4 text-xs text-slate-500 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
-             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-300"></span>可预约</div>
-             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse"></span>我的</div>
-             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-200"></span>不可用</div>
+         <div className="flex flex-wrap gap-3 text-xs text-slate-500 pb-1 md:pb-0 items-center">
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-300 shadow-sm"></span>可预约</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse ring-1 ring-indigo-200"></span>我的</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-100 border border-emerald-300"></span>使用中</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-100 border border-amber-300"></span>暂离</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-100 border border-rose-300"></span>被监督</div>
+             <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-200 border border-slate-300"></span>不可用</div>
          </div>
       </div>
 
