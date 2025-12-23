@@ -39,7 +39,8 @@ jobs:
           node-version: '20'
 
       - name: 📦 Install Supabase CLI
-        run: npm install -g supabase
+        run: |
+          brew install supabase/tap/supabase
 
       - name: 🔗 Link Supabase Project
         run: |
