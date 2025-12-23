@@ -6,6 +6,7 @@ from app.services.lib_service import LibService
 from app.services.auth_service import AuthService
 import logging
 from datetime import datetime
+from sqlalchemy.sql import func
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +114,7 @@ def run_seat_task(user_id: int, task_id: int):
             task.last_message = str(e)
     finally:
         if task:
-            task.last_run = database.func.now()
+            task.last_run = func.now()
             db.commit()
         db.close()
 
@@ -146,7 +147,7 @@ def run_signin_task(user_id: int, task_id: int):
             task.last_message = str(e)
     finally:
         if task:
-            task.last_run = database.func.now()
+            task.last_run = func.now()
             db.commit()
         db.close()
 
