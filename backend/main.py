@@ -2,8 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app import models, database, scheduler, crud
 from sqlalchemy import inspect, text
-from app.routers import auth, library, admin, tasks
+from app.routers import auth, library, admin, tasks, cron
 import time
+import os
 from sqlalchemy.exc import OperationalError
 
 # Create DB Tables with retry logic
@@ -47,11 +48,15 @@ app.include_router(auth.router)
 app.include_router(library.router)
 app.include_router(admin.router)
 app.include_router(tasks.router)
+app.include_router(cron.router)
 
 @app.on_event("startup")
 def startup_event():
-    scheduler.start_scheduler()
-    
+    if not os.getenv("VERCEL"):
+        scheduler.start_scheduler()
+    else:
+        print("Running on Vercel: Background scheduler disabled.")
+
     # Seed Invite Code
     db = database.SessionLocal()
     try:

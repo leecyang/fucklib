@@ -11,3 +11,6 @@ bcrypt==3.2.0
 pydantic
 python-multipart
 websockets
+psycopg2-binary
+croniter
+pytz
