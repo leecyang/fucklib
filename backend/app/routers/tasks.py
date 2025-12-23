@@ -13,7 +13,13 @@ router = APIRouter(
 
 @router.get("/", response_model=List[schemas.TaskResponse])
 def get_tasks(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
-    return current_user.tasks
+    tasks = list(current_user.tasks)
+    for t in tasks:
+        try:
+            setattr(t, 'next_run', scheduler.compute_next_run(t))
+        except Exception:
+            setattr(t, 'next_run', None)
+    return tasks
 
 @router.post("/", response_model=schemas.TaskResponse)
 def create_task(task: schemas.TaskCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
@@ -33,17 +39,29 @@ def update_task(task_id: int, task_update: schemas.TaskUpdate, db: Session = Dep
     if not db_task:
         raise HTTPException(status_code=404, detail="任务不存在")
     
-    for key, value in task_update.dict(exclude_unset=True).items():
+    old_values = {
+        'is_enabled': db_task.is_enabled,
+        'cron_expression': db_task.cron_expression,
+        'task_type': db_task.task_type,
+        'config': db_task.config,
+        'remark': getattr(db_task, 'remark', None)
+    }
+    for key, value in task_update.dict().items():
         setattr(db_task, key, value)
     
-    db.commit()
-    db.refresh(db_task)
-    
-    # Update scheduler
-    if db_task.is_enabled:
-        scheduler.add_task_job(db_task)
-    else:
-        scheduler.remove_task_job(db_task.id)
+    try:
+        db.commit()
+        db.refresh(db_task)
+        if db_task.is_enabled:
+            scheduler.add_task_job(db_task)
+        else:
+            scheduler.remove_task_job(db_task.id)
+    except Exception as e:
+        # rollback to previous state
+        for k, v in old_values.items():
+            setattr(db_task, k, v)
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"更新任务失败：{str(e)}")
         
     return db_task
 
@@ -59,3 +77,23 @@ def delete_task(task_id: int, db: Session = Depends(database.get_db), current_us
     db.delete(db_task)
     db.commit()
     return {"message": "任务已删除"}
+
+@router.patch("/{task_id}/toggle", response_model=schemas.TaskResponse)
+def toggle_task(task_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
+    db_task = db.query(models.Task).filter(models.Task.id == task_id, models.Task.user_id == current_user.id).first()
+    if not db_task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    prev = db_task.is_enabled
+    db_task.is_enabled = not prev
+    try:
+        db.commit()
+        db.refresh(db_task)
+        if db_task.is_enabled:
+            scheduler.add_task_job(db_task)
+        else:
+            scheduler.remove_task_job(db_task.id)
+        return db_task
+    except Exception as e:
+        db_task.is_enabled = prev
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"切换任务状态失败：{str(e)}")

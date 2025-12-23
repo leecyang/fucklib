@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { taskApi, type Task } from '../api/client';
 import SeatPicker from '../components/SeatPicker';
 import { cn } from '../lib/utils';
-import { Plus, Trash2, Clock, CheckCircle2, AlertCircle, Calendar, Bluetooth, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Clock, CheckCircle2, AlertCircle, Calendar, Bluetooth } from 'lucide-react';
 import { alert } from '../components/Dialog';
 
 const ScheduledTasks: React.FC = () => {
@@ -12,7 +12,6 @@ const ScheduledTasks: React.FC = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [showSeatPicker, setShowSeatPicker] = useState(false);
-    const [editingTask, setEditingTask] = useState<Task | null>(null);
     
     // Form State
     const [type, setType] = useState('reserve'); // reserve, signin
@@ -20,49 +19,27 @@ const ScheduledTasks: React.FC = () => {
     const [strategy, setStrategy] = useState('default_all'); // default_all, custom
     const [libId, setLibId] = useState('');
     const [seatKey, setSeatKey] = useState('');
-    const [remark, setRemark] = useState('');
     const [pickedSeat, setPickedSeat] = useState<{ libId: number, libName: string, seatKey: string, seatName: string } | null>(null);
+    const [remark, setRemark] = useState('');
     
     useEffect(() => {
         fetchTasks();
     }, []);
 
-    const sortTasks = (tasks: Task[]) => {
-        return [...tasks].sort((a, b) => {
-            const getMinutes = (cron: string) => {
-                try {
-                    const parts = cron.split(' ');
-                    if (parts.length >= 2) {
-                        return parseInt(parts[1]) * 60 + parseInt(parts[0]);
-                    }
-                } catch (e) {}
-                return 0;
-            };
-            return getMinutes(a.cron_expression) - getMinutes(b.cron_expression);
-        });
-    };
-
     const fetchTasks = async () => {
         try {
             const res = await taskApi.getTasks();
-            setTasks(sortTasks(res.data));
+            const list = Array.isArray(res.data) ? res.data : [];
+            const sorted = [...list].sort((a, b) => {
+                const ta = a.next_run ? new Date(a.next_run).getTime() : computeNextRunMs(a.cron_expression);
+                const tb = b.next_run ? new Date(b.next_run).getTime() : computeNextRunMs(b.cron_expression);
+                return ta - tb;
+            });
+            setTasks(sorted);
         } catch (err) {
             console.error(err);
         }
     }
-
-    const handleToggle = async (task: Task) => {
-        try {
-            const newStatus = !task.is_enabled;
-            // Optimistic update
-            setTasks(prev => prev.map(t => t.id === task.id ? { ...t, is_enabled: newStatus } : t));
-            
-            await taskApi.updateTask(task.id, { is_enabled: newStatus });
-        } catch (err) {
-            alert('状态更新失败');
-            fetchTasks(); // Revert
-        }
-    };
 
     const handleDelete = async (id: number) => {
         if(!confirm('确定删除?')) return;
@@ -73,43 +50,6 @@ const ScheduledTasks: React.FC = () => {
             alert('删除失败');
         }
     }
-
-    const resetForm = () => {
-        setType('reserve');
-        setTime('08:00');
-        setStrategy('default_all');
-        setLibId('');
-        setSeatKey('');
-        setRemark('');
-        setPickedSeat(null);
-        setEditingTask(null);
-    };
-
-    const handleCreate = () => {
-        resetForm();
-        setShowModal(true);
-    };
-
-    const handleEdit = (task: Task) => {
-        setEditingTask(task);
-        setType(task.task_type);
-        setRemark(task.remark || '');
-        
-        // Parse Cron
-        const parts = task.cron_expression.split(' ');
-        if (parts.length >= 2) {
-            const m = parts[0].padStart(2, '0');
-            const h = parts[1].padStart(2, '0');
-            setTime(`${h}:${m}`);
-        }
-        
-        if (task.config) {
-            if (task.config.strategy) setStrategy(task.config.strategy);
-            if (task.config.lib_id) setLibId(String(task.config.lib_id));
-            if (task.config.seat_key) setSeatKey(task.config.seat_key);
-        }
-        setShowModal(true);
-    };
 
     const formatCron = (cron: string) => {
         try {
@@ -125,6 +65,24 @@ const ScheduledTasks: React.FC = () => {
         }
     };
     
+    const computeNextRunMs = (cron: string) => {
+        try {
+            const parts = cron.split(' ');
+            if (parts.length < 2) return Date.now();
+            const minute = Number(parts[0]);
+            const hour = Number(parts[1]);
+            const now = new Date();
+            const next = new Date(now);
+            next.setHours(hour, minute, 0, 0);
+            if (next.getTime() <= now.getTime()) {
+                next.setDate(next.getDate() + 1);
+            }
+            return next.getTime();
+        } catch {
+            return Date.now();
+        }
+    }
+    
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -133,16 +91,22 @@ const ScheduledTasks: React.FC = () => {
         // Note: Server timezone is Asia/Shanghai.
         const cron = `${Number(minute)} ${Number(hour)} * * *`;
         
+        if (!/^\d{2}:\d{2}$/.test(time)) {
+            alert('时间格式不正确');
+            return;
+        }
+        if (remark && remark.trim().length > 500) {
+            alert('备注长度不能超过500字符');
+            return;
+        }
+        
         const payload: any = {
             task_type: type,
             cron_expression: cron,
-            remark: remark,
-            config: {}
+            is_enabled: true,
+            config: {},
+            remark: remark.trim() || undefined
         };
-
-        if (!editingTask) {
-            payload.is_enabled = true;
-        }
         
         if (type === 'reserve') {
             payload.config.strategy = strategy;
@@ -153,29 +117,55 @@ const ScheduledTasks: React.FC = () => {
         }
         
         try {
-            if (editingTask) {
-                await taskApi.updateTask(editingTask.id, payload);
-            } else {
-                await taskApi.createTask(payload);
-            }
+            await taskApi.createTask(payload);
             setShowModal(false);
+            setRemark('');
             fetchTasks();
         } catch(err) {
-            alert(editingTask ? '更新失败' : '创建失败');
+            alert('创建失败');
         }
     }
     // ==================================================================================
     // BUSINESS LOGIC END
     // ==================================================================================
 
-    const ToggleSwitch = ({ enabled, onClick }: { enabled: boolean, onClick: () => void }) => (
-        <div 
-            onClick={onClick}
-            className={cn("w-11 h-6 bg-slate-200 rounded-full relative transition-colors duration-200 ease-in-out cursor-pointer", enabled && "bg-indigo-600")}
-        >
+    const ToggleSwitch = ({ enabled }: { enabled: boolean }) => (
+        <div className={cn("w-11 h-6 bg-slate-200 rounded-full relative transition-colors duration-200 ease-in-out cursor-pointer", enabled && "bg-indigo-600")}>
             <span className={cn("absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 shadow-sm", enabled && "translate-x-5")} />
         </div>
     );
+    
+    const toggleEnabled = async (task: Task) => {
+        try {
+            const res = await taskApi.toggleTask(task.id);
+            setTasks(prev => {
+                const list = prev.map(t => t.id === task.id ? res.data : t);
+                return [...list].sort((a, b) => {
+                    const ta = a.next_run ? new Date(a.next_run).getTime() : computeNextRunMs(a.cron_expression);
+                    const tb = b.next_run ? new Date(b.next_run).getTime() : computeNextRunMs(b.cron_expression);
+                    return ta - tb;
+                });
+            });
+        } catch (err) {
+            alert('切换状态失败');
+        }
+    }
+    
+    const editRemark = async (task: Task) => {
+        const val = prompt('编辑备注（最多500字符）', task.remark || '');
+        if (val === null) return;
+        const trimmed = val.trim();
+        if (trimmed.length > 500) {
+            alert('备注长度不能超过500字符');
+            return;
+        }
+        try {
+            const res = await taskApi.updateTask(task.id, { remark: trimmed });
+            setTasks(prev => prev.map(t => t.id === task.id ? res.data : t));
+        } catch (err) {
+            alert('更新备注失败');
+        }
+    }
 
     return (
         <div className="space-y-6">
@@ -185,7 +175,7 @@ const ScheduledTasks: React.FC = () => {
                     <p className="text-slate-500 text-sm mt-1">管理自动预约与蓝牙签到。</p>
                 </div>
                 <button 
-                    onClick={handleCreate}
+                    onClick={() => setShowModal(true)}
                     className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 shadow-sm hover:shadow-md transition-all flex items-center gap-2 font-medium"
                 >
                     <Plus className="w-5 h-5" />
@@ -200,10 +190,10 @@ const ScheduledTasks: React.FC = () => {
                         <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-semibold tracking-wider">
                             <th className="px-6 py-4">类型</th>
                             <th className="px-6 py-4">时间</th>
-                            <th className="px-6 py-4">备注</th>
                             <th className="px-6 py-4">启用</th>
                             <th className="px-6 py-4">上次运行</th>
                             <th className="px-6 py-4">结果</th>
+                            <th className="px-6 py-4">备注</th>
                             <th className="px-6 py-4 text-right">操作</th>
                         </tr>
                     </thead>
@@ -224,12 +214,9 @@ const ScheduledTasks: React.FC = () => {
                                     </span>
                                 </td>
                                 <td className="px-6 py-4">
-                                    <span className="text-sm text-slate-600 truncate max-w-[150px] block" title={task.remark}>
-                                        {task.remark || '-'}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <ToggleSwitch enabled={task.is_enabled} onClick={() => handleToggle(task)} />
+                                    <div onClick={() => toggleEnabled(task)}>
+                                        <ToggleSwitch enabled={task.is_enabled} />
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4 text-sm text-slate-500">
                                     {task.last_run ? new Date(task.last_run).toLocaleString() : '-'}
@@ -243,21 +230,24 @@ const ScheduledTasks: React.FC = () => {
                                         {task.last_status || '等待中'}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-right">
-                                    <div className="flex items-center justify-end gap-2">
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-slate-600 truncate max-w-[200px]">{task.remark || '-'}</span>
                                         <button 
-                                            onClick={() => handleEdit(task)}
-                                            className="text-slate-400 hover:text-indigo-600 transition-colors p-2 hover:bg-indigo-50 rounded-lg"
+                                            onClick={() => editRemark(task)}
+                                            className="text-slate-400 hover:text-indigo-600 transition-colors text-xs"
                                         >
-                                            <Edit2 className="w-4 h-4" />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDelete(task.id)}
-                                            className="text-slate-400 hover:text-rose-600 transition-colors p-2 hover:bg-rose-50 rounded-lg"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
+                                            编辑
                                         </button>
                                     </div>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                    <button 
+                                        onClick={() => handleDelete(task.id)}
+                                        className="text-slate-400 hover:text-rose-600 transition-colors p-2 hover:bg-rose-50 rounded-lg"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
                                 </td>
                             </tr>
                         ))}
@@ -289,14 +279,9 @@ const ScheduledTasks: React.FC = () => {
                                         <Clock className="w-3 h-3" />
                                         <span className="font-mono">{formatCron(task.cron_expression)}</span>
                                     </div>
-                                    {task.remark && (
-                                        <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                                            <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{task.remark}</span>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
-                            <ToggleSwitch enabled={task.is_enabled} onClick={() => handleToggle(task)} />
+                            <ToggleSwitch enabled={task.is_enabled} />
                         </div>
                         
                         <div className="space-y-2 text-sm border-t border-slate-100 pt-3 mt-3">
@@ -310,6 +295,10 @@ const ScheduledTasks: React.FC = () => {
                                     {task.last_status || '等待中'}
                                 </span>
                             </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">备注</span>
+                                <span className="text-slate-900">{task.remark || '-'}</span>
+                            </div>
                             {task.last_message && (
                                 <div className="text-xs text-slate-400 mt-1 truncate bg-slate-50 p-2 rounded">
                                     {task.last_message}
@@ -317,14 +306,6 @@ const ScheduledTasks: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="absolute top-4 right-16">
-                            <button 
-                                onClick={() => handleEdit(task)}
-                                className="text-slate-300 hover:text-indigo-500 p-1"
-                            >
-                                <Edit2 className="w-4 h-4" />
-                            </button>
-                        </div>
                         <button 
                             onClick={() => handleDelete(task.id)}
                             className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 p-1"
@@ -339,7 +320,7 @@ const ScheduledTasks: React.FC = () => {
             {showModal && (
                 <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl border border-slate-100 animate-in fade-in zoom-in duration-200">
-                        <h2 className="text-xl font-bold mb-6 text-slate-900">{editingTask ? '编辑任务' : '新建定时任务'}</h2>
+                        <h2 className="text-xl font-bold mb-6 text-slate-900">新建定时任务</h2>
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">任务类型</label>
@@ -363,15 +344,16 @@ const ScheduledTasks: React.FC = () => {
                                     required
                                 />
                             </div>
-
+                            
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1.5">备注（可选）</label>
-                                <input 
-                                    type="text" 
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">备注</label>
+                                <input
+                                    type="text"
                                     className="w-full border border-slate-200 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                                     value={remark}
                                     onChange={e => setRemark(e.target.value)}
-                                    placeholder="例如：每日自习"
+                                    placeholder="例如：早八签到"
+                                    maxLength={500}
                                 />
                             </div>
                             
@@ -433,7 +415,7 @@ const ScheduledTasks: React.FC = () => {
                                     type="submit" 
                                     className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-sm"
                                 >
-                                    {editingTask ? '保存修改' : '创建'}
+                                    创建
                                 </button>
                             </div>
                         </form>

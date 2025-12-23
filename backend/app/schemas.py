@@ -45,17 +45,40 @@ class TaskBase(BaseModel):
     cron_expression: Optional[str] = None
     config: Optional[Dict[str, Any]] = {}
     is_enabled: bool = True
-    remark: Optional[str] = None
+    remark: Optional[str] = Field(None, max_length=500)
+    
+    @validator('cron_expression')
+    def validate_cron(cls, v):
+        if v is None:
+            return v
+        parts = str(v).split()
+        if len(parts) != 5:
+            raise ValueError('cron表达式必须为5段格式：m h d m w')
+        try:
+            m = int(parts[0]); h = int(parts[1])
+            if not (0 <= m <= 59 and 0 <= h <= 23):
+                raise ValueError('小时或分钟不合法')
+        except ValueError:
+            raise ValueError('小时或分钟必须为数字')
+        return v
+    
+    @validator('config')
+    def validate_config(cls, v, values):
+        tt = values.get('task_type')
+        if tt == 'reserve':
+            strategy = None
+            if isinstance(v, dict):
+                strategy = v.get('strategy')
+            if strategy == 'custom':
+                if not isinstance(v, dict) or v.get('lib_id') is None or not v.get('seat_key'):
+                    raise ValueError('自定义选座需要提供lib_id和seat_key')
+        return v
 
 class TaskCreate(TaskBase):
     pass
 
-class TaskUpdate(BaseModel):
-    task_type: Optional[str] = None
-    cron_expression: Optional[str] = None
-    config: Optional[Dict[str, Any]] = None
-    is_enabled: Optional[bool] = None
-    remark: Optional[str] = None
+class TaskUpdate(TaskBase):
+    pass
 
 class TaskResponse(TaskBase):
     id: int
@@ -63,6 +86,7 @@ class TaskResponse(TaskBase):
     last_run: Optional[datetime] = None
     last_status: Optional[str] = None
     last_message: Optional[str] = None
+    next_run: Optional[datetime] = None
 
     class Config:
         from_attributes = True

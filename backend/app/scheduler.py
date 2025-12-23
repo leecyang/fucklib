@@ -5,10 +5,22 @@ from app import crud, models, database
 from app.services.lib_service import LibService
 from app.services.auth_service import AuthService
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 scheduler = BackgroundScheduler(timezone='Asia/Shanghai')
+
+def compute_next_run(task: models.Task):
+    try:
+        if not task or not task.cron_expression:
+            return None
+        tz = getattr(scheduler, 'timezone', None)
+        now = datetime.now(tz) if tz else datetime.now()
+        trigger = CronTrigger.from_crontab(task.cron_expression, timezone=tz) if tz else CronTrigger.from_crontab(task.cron_expression)
+        return trigger.get_next_fire_time(None, now)
+    except Exception:
+        return None
 
 def run_seat_task(user_id: int, task_id: int):
     db = database.SessionLocal()
@@ -172,12 +184,17 @@ def add_task_job(task: models.Task):
         try:
             # Simple Cron parsing: Assume 5 parts "m h d m w"
             # APScheduler CronTrigger format
+            tz = getattr(scheduler, 'timezone', None)
+            now = datetime.now(tz) if tz else datetime.now()
+            trigger = CronTrigger.from_crontab(task.cron_expression, timezone=tz) if tz else CronTrigger.from_crontab(task.cron_expression)
+            next_run = trigger.get_next_fire_time(None, now)
             scheduler.add_job(
                 func,
-                CronTrigger.from_crontab(task.cron_expression),
+                trigger,
                 id=job_id,
                 args=[task.user_id, task.id],
-                replace_existing=True
+                replace_existing=True,
+                next_run_time=next_run
             )
             logger.info(f"Added job {job_id} for task {task.task_type}")
         except Exception as e:

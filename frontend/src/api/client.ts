@@ -141,6 +141,7 @@ export interface Task {
     last_message?: string;
     last_run?: string;
     remark?: string;
+    next_run?: string;
 }
 
 export interface Lib {
@@ -182,6 +183,7 @@ export const taskApi = {
     createTask: (data: any) => api.post<Task>('/tasks/', data),
     updateTask: (id: number, data: any) => api.put<Task>(`/tasks/${id}`, data),
     deleteTask: (id: number) => api.delete(`/tasks/${id}`),
+    toggleTask: (id: number) => api.patch<Task>(`/tasks/${id}/toggle`, null),
 };
 
 export const libApi = {

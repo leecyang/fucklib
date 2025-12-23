@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app import models, database, scheduler, crud
+from sqlalchemy import inspect, text
 from app.routers import auth, library, admin, tasks
 import time
 from sqlalchemy.exc import OperationalError
@@ -12,6 +13,15 @@ def init_db():
         try:
             models.Base.metadata.create_all(bind=database.engine)
             print("Database tables created successfully")
+            try:
+                inspector = inspect(database.engine)
+                cols = [c['name'] for c in inspector.get_columns('tasks')]
+                if 'remark' not in cols:
+                    with database.engine.begin() as conn:
+                        conn.execute(text("ALTER TABLE tasks ADD COLUMN remark VARCHAR(500)"))
+                    print("Migrated: added tasks.remark column")
+            except Exception as e:
+                print(f"Migration check failed: {e}")
             return
         except OperationalError as e:
             retries -= 1
