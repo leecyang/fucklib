@@ -242,7 +242,14 @@ class LibService:
         }
         res = self._post(payload)
         if 'errors' in res:
-            raise Exception(res['errors'][0].get('message', 'Cancel Failed'))
+            errs = res.get('errors') or []
+            for e in errs:
+                msg = str(e.get('msg') or e.get('message') or '')
+                code = e.get('code')
+                if '退座成功' in msg or code == 1:
+                    break
+            else:
+                raise Exception(errs[0].get('message', 'Cancel Failed'))
         
         return res.get('data', {}).get('userAuth', {}).get('reserve', {}).get('reserveCancle')
 
