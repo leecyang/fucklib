@@ -69,5 +69,6 @@ class Task(Base):
     last_run = Column(DateTime(timezone=True), nullable=True)
     last_status = Column(String(50), nullable=True) # 'success', 'failed'
     last_message = Column(String(500), nullable=True)
+    remark = Column(String(500), nullable=True)
     
     user = relationship("User", back_populates="tasks")

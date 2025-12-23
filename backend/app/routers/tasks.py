@@ -33,7 +33,7 @@ def update_task(task_id: int, task_update: schemas.TaskUpdate, db: Session = Dep
     if not db_task:
         raise HTTPException(status_code=404, detail="任务不存在")
     
-    for key, value in task_update.dict().items():
+    for key, value in task_update.dict(exclude_unset=True).items():
         setattr(db_task, key, value)
     
     db.commit()

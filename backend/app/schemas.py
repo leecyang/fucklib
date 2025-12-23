@@ -45,12 +45,17 @@ class TaskBase(BaseModel):
     cron_expression: Optional[str] = None
     config: Optional[Dict[str, Any]] = {}
     is_enabled: bool = True
+    remark: Optional[str] = None
 
 class TaskCreate(TaskBase):
     pass
 
-class TaskUpdate(TaskBase):
-    pass
+class TaskUpdate(BaseModel):
+    task_type: Optional[str] = None
+    cron_expression: Optional[str] = None
+    config: Optional[Dict[str, Any]] = None
+    is_enabled: Optional[bool] = None
+    remark: Optional[str] = None
 
 class TaskResponse(TaskBase):
     id: int

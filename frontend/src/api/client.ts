@@ -140,6 +140,7 @@ export interface Task {
     last_status?: string;
     last_message?: string;
     last_run?: string;
+    remark?: string;
 }
 
 export interface Lib {
