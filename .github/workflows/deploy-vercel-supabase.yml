@@ -40,7 +40,8 @@ jobs:
 
       - name: 📦 Install Supabase CLI
         run: |
-          brew install supabase/tap/supabase
+          curl -fsSL https://raw.githubusercontent.com/supabase/cli/main/scripts/install.sh | sh
+          echo "$HOME/.supabase/bin" >> $GITHUB_PATH
 
       - name: 🔗 Link Supabase Project
         run: |
