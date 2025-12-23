@@ -90,7 +90,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                     <h2 className="text-xl font-bold text-slate-900">{userInfo?.user_student_name || '未登录'}</h2>
-                    <p className="text-slate-500 font-mono text-sm">{userInfo?.user_student_no || 'No ID'}</p>
+                    <p className="text-slate-500 font-mono text-sm">学号：{userInfo?.user_student_no || '-'}</p>
                 </div>
             </div>
             
@@ -135,18 +135,19 @@ export default function Dashboard() {
                    {(() => {
             const seat = seatInfo;
             const lib = libs.find(l => l.id === (seat.lib_id || seat.libId));
-            const floor = lib ? (lib.name.split(' - ')[1] || lib.name) : (seat.lib_id || seat.libId);
+            const libName = lib ? (lib.name.split(' - ')[0] || lib.name) : (seat.lib_name || '');
+            const floor = lib ? (lib.name.split(' - ')[1] || lib.name) : (seat.lib_floor || seat.lib_id || seat.libId);
             const seatObj = layoutCache[seat.lib_id || seat.libId]?.[seat.seat_key || seat.seatKey];
             const seatName = seatObj?.name || seat.seat_name || seat.seatKey || seat.seat_key;
                       
                       return (
                           <>
-                            <div className="flex items-end justify-between">
-                                <div className="text-4xl font-bold font-mono tracking-tight">{seatName}</div>
-                                <div className="px-2 py-1 rounded-full bg-white/20 text-xs text-indigo-100">楼层：{floor}</div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div className="bg-white/10 rounded-lg px-3 py-2">
+                          <div className="flex items-end justify-between">
+                              <div className="text-4xl font-bold font-mono tracking-tight">{seatName}</div>
+                              <div className="px-2 py-1 rounded-full bg-white/20 text-xs text-indigo-100">位置：{libName}（{floor}）</div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div className="bg-white/10 rounded-lg px-3 py-2">
                                 <div className="opacity-70">状态</div>
                                 {(() => {
                                   const status = seat.status;

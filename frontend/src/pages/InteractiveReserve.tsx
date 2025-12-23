@@ -301,7 +301,7 @@ const InteractiveReserve: React.FC = () => {
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleLibChange(Number(e.target.value))}
                     disabled={loading}
                  >
-                     <option value="">Select Library & Floor...</option>
+                    <option value="">选择图书馆与楼层...</option>
                     {libs.map((l: Lib) => <option key={l.id} value={l.id}>{l.name} {checkLibOpen(l) ? '' : '(已关闭)'}</option>)}
                  </select>
              </div>
@@ -332,7 +332,8 @@ const InteractiveReserve: React.FC = () => {
                                 const libId = reserveInfo.lib_id || reserveInfo.libId;
                                 const seatKey = reserveInfo.seat_key || reserveInfo.seatKey;
                                 const lib = libs.find(l => l.id === libId);
-                                const floor = lib ? (lib.name.split(' - ')[1] || lib.name) : libId;
+                                const libName = lib ? (lib.name.split(' - ')[0] || lib.name) : (reserveInfo.lib_name || '');
+                                const floor = lib ? (lib.name.split(' - ')[1] || lib.name) : (reserveInfo.lib_floor || libId);
                                 const seatName = reserveSeatName || (selectedLib === libId && Array.isArray(seats) ? (seats.find(s => s.key === seatKey)?.name || seatKey) : seatKey);
                                 const status = reserveInfo.status;
                                 const statusText = reserveInfo.selection_status === 'reserved'
@@ -348,7 +349,7 @@ const InteractiveReserve: React.FC = () => {
                                           : '未知';
                                 return (
                                   <>
-                                    <p className="flex items-center gap-2"><span className="opacity-70">位置：</span> <span className="font-medium">{floor}</span></p>
+                                    <p className="flex items-center gap-2"><span className="opacity-70">位置：</span> <span className="font-medium">{libName}</span>（<span className="font-medium">{floor}</span>）</p>
                                     <p className="flex items-center gap-2"><span className="opacity-70">座位：</span> <span className="font-mono font-bold bg-white/50 px-1.5 rounded">{seatName}</span></p>
                                     <p className="flex items-center gap-2"><span className="opacity-70">状态：</span> <span className={cn("font-medium", status === 5 ? "text-rose-600 font-bold animate-pulse" : "")}>{statusText}</span></p>
                                   </>
