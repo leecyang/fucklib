@@ -3,7 +3,7 @@ import { taskApi, type Task } from '../api/client';
 import SeatPicker from '../components/SeatPicker';
 import { cn } from '../lib/utils';
 import { Plus, Trash2, Clock, CheckCircle2, AlertCircle, Calendar, Bluetooth } from 'lucide-react';
-import { alert, promptInput } from '../components/Dialog';
+import { alert, promptInput, confirm as dialogConfirm } from '../components/Dialog';
 
 const ScheduledTasks: React.FC = () => {
     // ==================================================================================
@@ -42,7 +42,8 @@ const ScheduledTasks: React.FC = () => {
     }
 
     const handleDelete = async (id: number) => {
-        if(!confirm('确定删除?')) return;
+        const ok = await dialogConfirm('确定要删除该定时任务吗？', '删除任务');
+        if(!ok) return;
         try {
             await taskApi.deleteTask(id);
             fetchTasks();
