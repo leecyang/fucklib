@@ -1,10 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import sys
+import os
+
+# Fix import path for Vercel
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from app import models, database, scheduler, crud
 from sqlalchemy import inspect, text
 from app.routers import auth, library, admin, tasks, cron
 import time
-import os
 from sqlalchemy.exc import OperationalError
 
 # Create DB Tables with retry logic
