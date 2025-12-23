@@ -40,8 +40,11 @@ jobs:
 
       - name: 📦 Install Supabase CLI
         run: |
-          curl -fsSL https://raw.githubusercontent.com/supabase/cli/main/scripts/install.sh | sh
-          echo "$HOME/.supabase/bin" >> $GITHUB_PATH
+          SUPABASE_VERSION=$(curl -s https://api.github.com/repos/supabase/cli/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+          wget -q "https://github.com/supabase/cli/releases/download/v${SUPABASE_VERSION}/supabase_${SUPABASE_VERSION}_linux_amd64.deb" -O supabase.deb
+          sudo dpkg -i supabase.deb
+          rm supabase.deb
+          supabase --version
 
       - name: 🔗 Link Supabase Project
         run: |
