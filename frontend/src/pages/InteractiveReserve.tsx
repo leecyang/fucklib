@@ -247,35 +247,81 @@ const InteractiveReserve: React.FC = () => {
   const renderSeats = (seatList: Seat[]) => {
       const libObj = selectedLib ? libs.find(l => l.id === selectedLib) : null;
       const isWithinWindow = libObj ? checkLibOpen(libObj) : true;
+      // Check if user has an active reservation (Status > 0)
+      const hasReservation = !!(reserveInfo && reserveInfo.status && reserveInfo.status > 0);
+
       return (
           <div className="grid grid-cols-4 md:grid-cols-8 lg:grid-cols-10 gap-3">
               {seatList.map(seat => {
-                  const isFree = (seat as any).seat_status === 1 || seat.status === 1;
+                  // Normalize status: seat_status or status. 1 means Available.
+                  const rawStatus = (seat as any).seat_status !== undefined ? (seat as any).seat_status : seat.status;
+                  const isFree = rawStatus === 1;
+                  
                   const isMine = reserveInfo && (reserveInfo.seat_key ? reserveInfo.seat_key === seat.key : reserveInfo?.seatKey === seat.key);
                   const isSelected = selectedSeatKey === seat.key;
-                  const isClickable = isWithinWindow && isFree;
+                  
+                  // Interaction Logic: Clickable only if window open, seat is free, and user has no reservation
+                  const canBook = isWithinWindow && isFree && !hasReservation;
+                  
+                  // Visual Logic & Tooltip
+                  let seatColorClass = "";
+                  let tooltipStatus = "";
 
-                  // Modern Visual Map Logic
+                  if (isMine) {
+                      seatColorClass = "bg-indigo-600 text-white animate-pulse shadow-indigo-200 ring-2 ring-indigo-200 cursor-default";
+                      tooltipStatus = "我的座位";
+                  } else if (isSelected) {
+                      seatColorClass = "bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500 z-10 scale-110 shadow-md cursor-pointer";
+                      tooltipStatus = "已选中";
+                  } else if (rawStatus === 1) {
+                      // Status 1: Available
+                      if (canBook) {
+                          seatColorClass = "bg-white border-slate-200 text-slate-600 hover:border-indigo-400 hover:shadow-md hover:-translate-y-0.5 cursor-pointer";
+                          tooltipStatus = "可预约";
+                      } else {
+                          // Available but Locked (Closed or User has reservation)
+                          seatColorClass = "bg-white border-slate-200 text-slate-400 cursor-not-allowed"; 
+                          if (!isWithinWindow) tooltipStatus = "已关闭";
+                          else if (hasReservation) tooltipStatus = "不可预约 (已有预约)";
+                          else tooltipStatus = "不可预约";
+                      }
+                  } else {
+                      // Status != 1: Occupied / Special Statuses
+                      // Mapping based on common backend status codes
+                      switch (rawStatus) {
+                          case 2: // Checked In
+                          case 3: // Seated
+                              seatColorClass = "bg-emerald-50 border border-emerald-100 text-emerald-600 cursor-not-allowed";
+                              tooltipStatus = "使用中";
+                              break;
+                          case 4: // Away
+                              seatColorClass = "bg-amber-50 border border-amber-100 text-amber-600 cursor-not-allowed";
+                              tooltipStatus = "暂离";
+                              break;
+                          case 5: // Supervised
+                              seatColorClass = "bg-rose-50 border border-rose-100 text-rose-600 cursor-not-allowed";
+                              tooltipStatus = "被监督";
+                              break;
+                          default: // 0 or others
+                              seatColorClass = "bg-slate-100 text-slate-300 border border-transparent cursor-not-allowed";
+                              tooltipStatus = "不可预约";
+                      }
+                  }
+
                   return (
                     <div 
                         key={seat.key} 
                         className={cn(
-                            "relative aspect-square flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shadow-sm",
-                            isMine 
-                                ? "bg-indigo-600 text-white animate-pulse shadow-indigo-200 ring-2 ring-indigo-200" 
-                                : isSelected 
-                                    ? "bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500 z-10 scale-110 shadow-md"
-                                    : isClickable
-                                        ? "bg-white border border-slate-200 text-slate-600 hover:border-indigo-400 hover:shadow-md hover:-translate-y-0.5" 
-                                        : "bg-slate-100 text-slate-300 border border-transparent cursor-not-allowed"
+                            "relative aspect-square flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 shadow-sm",
+                            seatColorClass
                         )}
                         onClick={() => {
-                          if (!isMine && isClickable) {
+                          if (!isMine && canBook) {
                             setSelectedSeatKey(seat.key);
                             setSelectedSeatName(seat.name);
                           }
                         }}
-                        title={`${seat.name} (${isWithinWindow ? ((seat as any).seat_status === 1 || seat.status === 1) ? 'Available' : 'Unavailable' : 'Closed'})`}
+                        title={`${seat.name} (${tooltipStatus})`}
                     >
                         {seat.name}
                         {isMine && (
