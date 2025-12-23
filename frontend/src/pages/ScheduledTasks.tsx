@@ -281,7 +281,9 @@ const ScheduledTasks: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
-                            <ToggleSwitch enabled={task.is_enabled} />
+                            <div onClick={() => toggleEnabled(task)}>
+                                <ToggleSwitch enabled={task.is_enabled} />
+                            </div>
                         </div>
                         
                         <div className="space-y-2 text-sm border-t border-slate-100 pt-3 mt-3">

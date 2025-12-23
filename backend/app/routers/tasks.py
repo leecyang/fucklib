@@ -46,7 +46,7 @@ def update_task(task_id: int, task_update: schemas.TaskUpdate, db: Session = Dep
         'config': db_task.config,
         'remark': getattr(db_task, 'remark', None)
     }
-    for key, value in task_update.dict().items():
+    for key, value in task_update.dict(exclude_unset=True).items():
         setattr(db_task, key, value)
     
     try:
