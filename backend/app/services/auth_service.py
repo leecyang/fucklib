@@ -96,6 +96,10 @@ class AuthService:
             code = msg.get('code')
             if code == 403 or str(code) == '403':
                 raise Exception('Forbidden(403) 打卡被阻止')
+            # Treat non-zero code as failure
+            if code is not None and str(code) not in ('0', '200'):
+                detail = msg.get('msg') or msg.get('message') or r.text
+                raise Exception(f"Sign in failed: {detail}")
             return msg.get('msg', r.text)
         except Exception as e:
             raise Exception(f"Sign in request failed: {e}")
