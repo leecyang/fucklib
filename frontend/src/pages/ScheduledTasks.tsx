@@ -428,6 +428,7 @@ const ScheduledTasks: React.FC = () => {
             {showSeatPicker && (
                 <SeatPicker
                     ignoreTimeCheck={true}
+                    ignoreSeatStatus={true}
                     onClose={() => setShowSeatPicker(false)}
                     onPick={(data) => {
                         setPickedSeat(data);

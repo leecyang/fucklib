@@ -5,9 +5,10 @@ interface SeatPickerProps {
   onClose: () => void;
   onPick: (data: { libId: number, libName: string, seatKey: string, seatName: string }) => void;
   ignoreTimeCheck?: boolean;
+  ignoreSeatStatus?: boolean;
 }
 
-const SeatPicker: React.FC<SeatPickerProps> = ({ onClose, onPick, ignoreTimeCheck = false }) => {
+const SeatPicker: React.FC<SeatPickerProps> = ({ onClose, onPick, ignoreTimeCheck = false, ignoreSeatStatus = false }) => {
   const [libs, setLibs] = useState<Lib[]>([]);
   const [selectedLib, setSelectedLib] = useState<number | null>(null);
   const [seats, setSeats] = useState<Seat[]>([]);
@@ -89,15 +90,16 @@ const SeatPicker: React.FC<SeatPickerProps> = ({ onClose, onPick, ignoreTimeChec
                 const o = openStr ? toMin(openStr) : undefined;
                 const c = closeStr ? toMin(closeStr) : undefined;
                 const within = ignoreTimeCheck ? true : ((o === undefined || c === undefined) ? true : (c >= o ? (nowMin >= o && nowMin <= c) : (nowMin >= o || nowMin <= c)));
-                const isFree = ((seat as any).seat_status === 1 || seat.status === 1) && within;
+                const statusFree = (seat as any).seat_status === 1 || seat.status === 1;
+                const canPick = ignoreSeatStatus ? true : (statusFree && within);
                 return (
                   <button
                     key={seat.key}
                     className={`py-1 px-2 text-center border rounded text-xs transition-colors
-                      ${isFree ? 'bg-white hover:bg-gray-50 border-gray-300 text-gray-800'
+                      ${canPick ? 'bg-white hover:bg-gray-50 border-gray-300 text-gray-800'
                       : 'bg-gray-100 border-gray-200 text-gray-500'}`}
-                    onClick={() => isFree && pickSeat(seat)}
-                    title={`状态: ${isFree ? '可预约' : (within ? '不可预约' : `闭馆 (${openStr || '-'} - ${closeStr || '-'})`)}`}
+                    onClick={() => canPick && pickSeat(seat)}
+                    title={`状态: ${canPick ? '可选择(定时任务)' : (within ? '不可选择' : `闭馆 (${openStr || '-'} - ${closeStr || '-'})`)}`}
                   >
                     {seat.name}
                   </button>
