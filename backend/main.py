@@ -9,27 +9,32 @@ from sqlalchemy.exc import OperationalError
 
 # Create DB Tables with retry logic
 def init_db():
-    retries = 5
+    # In Vercel, we might want to be careful not to lock DB, but create_all is safe
+    retries = 3
     while retries > 0:
         try:
             models.Base.metadata.create_all(bind=database.engine)
             print("Database tables created successfully")
             try:
                 inspector = inspect(database.engine)
-                cols = [c['name'] for c in inspector.get_columns('tasks')]
-                if 'remark' not in cols:
-                    with database.engine.begin() as conn:
-                        conn.execute(text("ALTER TABLE tasks ADD COLUMN remark VARCHAR(500)"))
-                    print("Migrated: added tasks.remark column")
+                # Check if tasks table exists first
+                if inspector.has_table("tasks"):
+                    cols = [c['name'] for c in inspector.get_columns('tasks')]
+                    if 'remark' not in cols:
+                        with database.engine.begin() as conn:
+                            conn.execute(text("ALTER TABLE tasks ADD COLUMN remark VARCHAR(500)"))
+                        print("Migrated: added tasks.remark column")
             except Exception as e:
                 print(f"Migration check failed: {e}")
             return
         except OperationalError as e:
             retries -= 1
-            print(f"Database connection failed. Retrying in 5 seconds... ({retries} retries left)")
-            time.sleep(5)
+            print(f"Database connection failed. Retrying in 2 seconds... ({retries} retries left)")
+            time.sleep(2)
     print("Could not connect to the database after several retries.")
 
+# On Vercel, this module is loaded once per cold start.
+# We call init_db() to ensure tables exist.
 init_db()
 
 app = FastAPI(title="FuckLib 自助图书馆 API")
