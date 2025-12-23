@@ -227,8 +227,13 @@ const InteractiveReserve: React.FC = () => {
   const handleCancel = async () => {
       if(!await customConfirm('确定要取消当前的座位预约吗？取消后座位将被释放。', '取消预约')) return;
       try {
-          await libApi.cancelReserve();
-          await customAlert('预约已取消', '取消成功');
+          const res = await libApi.cancelReserve();
+          const msg = res.data?.message || '';
+          if (msg && msg.includes('退预选座位成功')) {
+              await customAlert('退预选座位成功', '操作成功');
+          } else {
+              await customAlert('预约已取消', '取消成功');
+          }
           setReserveInfo(null);
           if (selectedLib) handleLibChange(selectedLib);
       } catch (err: any) {

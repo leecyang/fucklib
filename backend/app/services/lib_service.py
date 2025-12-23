@@ -243,13 +243,13 @@ class LibService:
         res = self._post(payload)
         if 'errors' in res:
             errs = res.get('errors') or []
+            # Treat certain messages as success when not yet签到：退预选座位成功
             for e in errs:
-                msg = str(e.get('msg') or e.get('message') or '')
+                msg = e.get('msg') or e.get('message') or ''
                 code = e.get('code')
-                if '退座成功' in msg or code == 1:
-                    break
-            else:
-                raise Exception(errs[0].get('message', 'Cancel Failed'))
+                if ('退座成功' in str(msg)) or (code == 1 and ('退' in str(msg))):
+                    return {"message": "退预选座位成功"}
+            raise Exception(errs[0].get('message', 'Cancel Failed'))
         
         return res.get('data', {}).get('userAuth', {}).get('reserve', {}).get('reserveCancle')
 
