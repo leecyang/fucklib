@@ -52,3 +52,7 @@ Library Automatic Reservation & Check-in System.
 *   **Automatic Reservation**: Select seat and time.
 *   **Automatic Check-in**: Bluetooth sign-in support.
 *   **Status Monitoring**: View connection status and task logs.
+
+## Deployment
+
+Automated deployment via GitHub Actions (v2.0).
