@@ -62,23 +62,27 @@ const InteractiveReserve: React.FC = () => {
   const fetchReserveInfo = async () => {
       try {
           const res = await libApi.getReserveInfo();
+          console.log('DEBUG: fetchReserveInfo response:', res.data);
           setReserveInfo(res.data);
           
           // Check for supervision status (5)
           if (res.data?.status === 5) {
-             console.log('Detected supervision status. Auto-signin scheduled in 5 minutes.');
-             // Schedule auto-signin in 5 minutes (300000 ms)
+             console.log('Detected supervision status. Auto-signin scheduled in 3 seconds.');
+             // Schedule auto-signin in 3 seconds (3000 ms)
              setTimeout(async () => {
                  try {
                      console.log('Triggering auto-signin for supervision...');
-                     await libApi.signin();
-                     console.log('Auto-signin triggered successfully.');
+                     const signRes = await libApi.signin();
+                     console.log('Auto-signin triggered successfully:', signRes);
+                     await customAlert('检测到监督状态，系统已自动尝试签到。结果：' + (signRes.data?.message || '请求已发送'), '自动签到');
                      // Refresh info to update status
                      fetchReserveInfo();
-                 } catch (e) {
+                 } catch (e: any) {
                      console.error('Auto-signin failed:', e);
+                     // Optional: notify user of failure
+                     // await customAlert('自动签到失败: ' + (e.response?.data?.detail || e.message), '签到失败');
                  }
-             }, 5 * 60 * 1000); 
+             }, 3 * 1000); 
           }
 
           try {

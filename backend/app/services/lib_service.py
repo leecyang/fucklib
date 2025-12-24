@@ -79,14 +79,47 @@ class LibService:
         self.headers['Cookie'] = self.cookie
         self.session.headers['Cookie'] = self.cookie
 
+    def _update_cookies(self, new_cookies: Dict[str, str]):
+        """
+        Update cookies from response to keep session alive.
+        """
+        if not new_cookies:
+            return
+        
+        # Parse current cookies
+        cookie_dict = {}
+        if self.cookie:
+            for chunk in self.cookie.split(';'):
+                if '=' in chunk:
+                    k, v = chunk.strip().split('=', 1)
+                    cookie_dict[k] = v
+        
+        # Update with new cookies
+        cookie_dict.update(new_cookies)
+        
+        # Reconstruct cookie string
+        # Use '; ' as separator which is standard
+        self.cookie = '; '.join([f"{k}={v}" for k, v in cookie_dict.items()])
+        
+        # Update headers
+        self.headers['Cookie'] = self.cookie
+        self.session.headers['Cookie'] = self.cookie
+
     def _post(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
             r = self.session.post(self.BASE_URL, json=payload, timeout=10)
             r.raise_for_status()
-            sc = r.headers.get('Set-Cookie')
-            sid = self._extract_serverid(sc)
-            if sid:
-                self._reset_serverid(sid)
+            
+            # Update cookies automatically from response (handles SERVERID and auth tokens)
+            if r.cookies:
+                self._update_cookies(r.cookies.get_dict())
+            
+            # Legacy SERVERID handling (backup, though _update_cookies should cover it)
+            # sc = r.headers.get('Set-Cookie')
+            # sid = self._extract_serverid(sc)
+            # if sid:
+            #     self._reset_serverid(sid)
+
             data = r.json()
             if 'errors' in data:
                 logger.error(f"GraphQL Error for {payload.get('operationName')}: {data['errors']}")
@@ -273,6 +306,8 @@ class LibService:
             # 1. Check status (0 or None means no valid reservation)
             # Status: 0=None, 1=Reserved, 2=Signed In, 3=In Use, 4=Away, 5=Supervised/Finished
             status = reserve_data.get('status')
+            logger.info(f"DEBUG: get_reserve_info raw status: {status}, data: {reserve_data}")
+            
             # Fix: Only allow active statuses.
             valid_statuses = [1, 2, 3, 4, 5]
             if status not in valid_statuses:
@@ -298,8 +333,11 @@ class LibService:
                         
                     today = datetime.now().date()
                     if res_date < today:
-                        logger.info(f"Ignoring past reservation for {date_str} (Status: {status})")
-                        return None
+                        if status == 5:
+                            logger.info(f"Allowing past reservation for status 5 (Supervised). Date: {date_str}")
+                        else:
+                            logger.info(f"Ignoring past reservation for {date_str} (Status: {status})")
+                            return None
                 except Exception as e:
                     logger.warning(f"Date parse failed: {e}")
 
