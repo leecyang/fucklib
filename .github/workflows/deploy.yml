@@ -1,11 +1,12 @@
 name: Deploy
+# Triggering release v1.0 deployment
 
-# on:
-#   push:
-#     branches: ["main"]
+on:
+  push:
+    branches: ["release/v1.0"]
 
 concurrency:
-  group: fucklib-deploy-main
+  group: fucklib-deploy-v1.0
   cancel-in-progress: true
 
 jobs:
@@ -24,6 +25,6 @@ jobs:
             set -e
             cd /root/fucklib
             git fetch origin
-            git reset --hard origin/main
+            git reset --hard origin/release/v1.0
             git clean -fd
             docker compose up -d --build
