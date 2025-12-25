@@ -1,4 +1,6 @@
 name: Deploy
+# This workflow is disabled on deploy/vercel-supabase branch
+# Docker compose deployment is handled by release branches
 
 # on:
 #   push:

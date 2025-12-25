@@ -10,10 +10,21 @@ router = APIRouter(
     tags=["library"]
 )
 
-def get_lib_service(current_user: models.User = Depends(auth.get_current_user)):
+def get_lib_service(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(database.get_db)
+):
     if not current_user.wechat_config or not current_user.wechat_config.cookie:
         raise HTTPException(status_code=400, detail="请先在设置中绑定微信 Cookie")
-    return LibService(current_user.wechat_config.cookie)
+    
+    def save_cookie(new_cookie: str):
+        try:
+            update_data = schemas.WechatConfigUpdate(cookie=new_cookie)
+            crud.update_wechat_config(db, current_user.id, update_data)
+        except Exception as e:
+            print(f"Failed to auto-save cookie: {e}")
+
+    return LibService(current_user.wechat_config.cookie, save_cookie)
 
 @router.get("/config", response_model=schemas.WechatConfigResponse)
 def get_config(

@@ -52,3 +52,36 @@ Library Automatic Reservation & Check-in System.
 *   **Automatic Reservation**: Select seat and time.
 *   **Automatic Check-in**: Bluetooth sign-in support.
 *   **Status Monitoring**: View connection status and task logs.
+
+## Deployment
+
+This project supports **two deployment methods**:
+
+### 1️⃣ Docker Compose (Traditional Server)
+
+**Branches**: `main`, `release/v1.0`, `release/v2.0`
+
+-   **Backend**: FastAPI with APScheduler (long-running tasks)
+-   **Database**: MySQL (via Docker)
+-   **Frontend**: React (built and served)
+-   **Deployment**: SSH to server + `docker-compose up`
+
+Automated deployment via GitHub Actions to private server (v2.0).
+
+### 2️⃣ Vercel + Supabase (Serverless)
+
+**Branch**: `deploy/vercel-supabase`
+
+-   **Backend**: FastAPI as Vercel Serverless Functions (with `/api` prefix)
+-   **Database**: Supabase PostgreSQL
+-   **Frontend**: React (Vercel hosting)
+-   **Deployment**: GitHub Actions → Vercel + Supabase
+-   **Limitation**: Background scheduler disabled (Serverless restriction)
+
+**Key Differences**:
+-   All API routes use `/api` prefix for Vercel routing
+-   Database uses `NullPool` for optimal serverless performance
+-   Scheduled tasks should use external cron services (e.g., Vercel Cron)
+
+See `.github/workflows/deploy-vercel-supabase.yml` for deployment workflow.
+

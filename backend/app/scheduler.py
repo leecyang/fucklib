@@ -1,7 +1,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session
-from app import crud, models, database
+from app import crud, models, database, schemas
 from app.services.lib_service import LibService
 from app.services.auth_service import AuthService
 import logging
@@ -36,7 +36,16 @@ def run_seat_task(user_id: int, task_id: int):
                 task.last_message = '用户未绑定微信 Cookie'
             return
 
-        service = LibService(user.wechat_config.cookie)
+        def save_cookie(new_cookie):
+            try:
+                if user.wechat_config:
+                    user.wechat_config.cookie = new_cookie
+                    db.add(user.wechat_config)
+                    db.commit()
+            except Exception as e:
+                logger.error(f"Scheduler failed to save cookie: {e}")
+
+        service = LibService(user.wechat_config.cookie, save_cookie)
         
         # Skip if user already has a seat today
         try:
@@ -133,7 +142,15 @@ def run_signin_task(user_id: int, task_id: int):
 
         try:
             if user.wechat_config.cookie:
-                LibService(user.wechat_config.cookie).refresh_page()
+                def save_cookie(new_cookie):
+                    try:
+                        if user.wechat_config:
+                            user.wechat_config.cookie = new_cookie
+                            db.add(user.wechat_config)
+                            db.commit()
+                    except Exception as e:
+                        logger.error(f"Scheduler failed to save cookie: {e}")
+                LibService(user.wechat_config.cookie, save_cookie).refresh_page()
         except Exception:
             pass
 
