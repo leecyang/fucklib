@@ -20,8 +20,9 @@ class LibService:
     BASE_URL = "https://wechat.v2.traceint.com/index.php/graphql/"
     WS_URL = "wss://wechat.v2.traceint.com/ws?ns=prereserve/queue"
 
-    def __init__(self, cookie: str):
+    def __init__(self, cookie: str, on_cookie_update=None):
         self.cookie = cookie
+        self.on_cookie_update = on_cookie_update
         self.session = requests.Session()
         self._lib_layout_seen = set()
         self.headers = {
@@ -104,6 +105,13 @@ class LibService:
         # Update headers
         self.headers['Cookie'] = self.cookie
         self.session.headers['Cookie'] = self.cookie
+        
+        # Notify callback
+        if self.on_cookie_update:
+            try:
+                self.on_cookie_update(self.cookie)
+            except Exception as e:
+                logger.error(f"Failed to save updated cookie: {e}")
 
     def _post(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         try:
