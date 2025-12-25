@@ -198,4 +198,46 @@ export const libApi = {
     signin: () => api.post<any>('/library/signin'),
 };
 
+// Bark配置和通知相关类型
+export interface BarkConfig {
+    id: number;
+    user_id: number;
+    device_token: string;
+    server_url: string;
+    is_enabled: boolean;
+    subscriptions: string[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface BarkNotification {
+    id: number;
+    user_id: number;
+    notification_type: string;
+    title: string;
+    content: string;
+    icon?: string;
+    url?: string;
+    status: string;
+    error_message?: string;
+    created_at: string;
+}
+
+export interface BarkConfigUpdate {
+    device_token?: string;
+    server_url?: string;
+    is_enabled?: boolean;
+    subscriptions?: string[];
+}
+
+export const barkApi = {
+    getConfig: () => api.get<BarkConfig>('/bark/config'),
+    updateConfig: (data: BarkConfigUpdate) => api.put<BarkConfig>('/bark/config', data),
+    testPush: () => api.post<{ success: boolean; message: string }>('/bark/test'),
+    getNotifications: (page: number = 1, limit: number = 20) => 
+        api.get<{ total: number; page: number; limit: number; items: BarkNotification[] }>(
+            `/bark/notifications?page=${page}&limit=${limit}`
+        ),
+};
+
 export default api;

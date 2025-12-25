@@ -140,3 +140,45 @@ class InviteCodeResponse(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+# Bark配置Schemas
+class BarkConfigBase(BaseModel):
+    device_token: Optional[str] = None
+    server_url: Optional[str] = "https://api.day.app"
+    is_enabled: Optional[bool] = True
+    subscriptions: Optional[list] = ["reserve", "signin", "task", "config"]
+
+
+class BarkConfigUpdate(BaseModel):
+    device_token: Optional[str] = None
+    server_url: Optional[str] = None
+    is_enabled: Optional[bool] = None
+    subscriptions: Optional[list] = None
+
+
+class BarkConfigResponse(BarkConfigBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Bark通知Schemas
+class NotificationResponse(BaseModel):
+    id: int
+    user_id: int
+    notification_type: str
+    title: str
+    content: str
+    icon: Optional[str] = None
+    url: Optional[str] = None
+    status: str
+    error_message: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

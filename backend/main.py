@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app import models, database, scheduler, crud
 from sqlalchemy import inspect, text
-from app.routers import auth, library, admin, tasks, cron
+from app.routers import auth, library, admin, tasks, cron, bark
 import time
 from sqlalchemy.exc import OperationalError
 
@@ -59,6 +59,7 @@ app.include_router(library.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(tasks.router, prefix="/api")
 app.include_router(cron.router, prefix="/api")
+app.include_router(bark.router, prefix="/api")
 
 @app.on_event("startup")
 def startup_event():
