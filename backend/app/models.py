@@ -82,7 +82,7 @@ class BarkConfig(Base):
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     
     # Bark配置
-    device_token = Column(String(255), nullable=False)  # Bark设备令牌
+    bark_key = Column(String(255), nullable=False)  # Bark推送Key（从URL中提取）
     server_url = Column(String(255), default="https://api.day.app")  # 自定义服务器
     is_enabled = Column(Boolean, default=True)  # 是否启用推送
     

@@ -19,7 +19,7 @@ export default function Settings() {
 
   // Bark配置state
   const [barkConfig, setBarkConfig] = useState<Partial<BarkConfig>>({
-    device_token: '',
+    bark_key: '',
     server_url: 'https://api.day.app',
     is_enabled: true,
     subscriptions: ['reserve', 'signin', 'task', 'config']
@@ -130,13 +130,13 @@ export default function Settings() {
 
   const saveBarkConfig = async () => {
     try {
-      if (!barkConfig.device_token || barkConfig.device_token.trim() === '') {
-        setDialog({ title: '保存失败', body: '请先填写Device Token', variant: 'error' });
+      if (!barkConfig.bark_key || barkConfig.bark_key.trim() === '') {
+        setDialog({ title: '保存失败', body: '请先填写Bark Key', variant: 'error' });
         return;
       }
 
       await barkApi.updateConfig({
-        device_token: barkConfig.device_token,
+        bark_key: barkConfig.bark_key,
         server_url: barkConfig.server_url || 'https://api.day.app',
         is_enabled: barkConfig.is_enabled !== false,
         subscriptions: barkConfig.subscriptions || ['reserve', 'signin', 'task', 'config']
@@ -155,7 +155,7 @@ export default function Settings() {
   };
 
   const testBarkPush = async () => {
-    if (!barkConfigExists && (!barkConfig.device_token || barkConfig.device_token.trim() === '')) {
+    if (!barkConfigExists && (!barkConfig.bark_key || barkConfig.bark_key.trim() === '')) {
       setDialog({ title: '无法测试', body: '请先保存Bark配置', variant: 'error' });
       return;
     }
@@ -371,17 +371,17 @@ export default function Settings() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Device Token（设备令牌）
+              Bark Key（推送密钥）
             </label>
             <input
               type="text"
               className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm"
-              placeholder="在Bark应用中获取..."
-              value={barkConfig.device_token || ''}
-              onChange={(e) => setBarkConfig({ ...barkConfig, device_token: e.target.value })}
+              placeholder="从推送URL中复制Key部分..."
+              value={barkConfig.bark_key || ''}
+              onChange={(e) => setBarkConfig({ ...barkConfig, bark_key: e.target.value })}
             />
             <p className="text-xs text-slate-500 mt-1">
-              在App Store下载Bark应用，打开后即可看到Device Token
+              打开Bark应用，复制推送URL，提取其中的Key部分（如：dCbMxKjM9iV7mKAGuGUsuf）
             </p>
           </div>
 
@@ -478,10 +478,11 @@ export default function Settings() {
             <p className="text-xs text-blue-800 leading-relaxed">
               <strong>📌 配置步骤：</strong><br />
               1. 从App Store下载Bark应用<br />
-              2. 复制应用中显示的Device Token并粘贴到上方<br />
-              3. 选择想要订阅的通知类型<br />
-              4. 点击"测试推送"验证配置<br />
-              5. 点击"保存配置"完成设置
+              2. 打开应用，复制推送URL（如：https://api.day.app/xxx/推送内容）<br />
+              3. 提取URL中的Key部分（xxx）并粘贴到上方<br />
+              4. 选择想要订阅的通知类型<br />
+              5. 点击"测试推送"验证配置<br />
+              6. 点击"保存配置"完成设置
             </p>
           </div>
         </div>

@@ -47,12 +47,12 @@ def update_bark_config(
     
     if not bark_config:
         # 创建新配置
-        if not config_update.device_token:
-            raise HTTPException(status_code=400, detail="首次配置必须提供Device Token")
+        if not config_update.bark_key:
+            raise HTTPException(status_code=400, detail="首次配置必须提供Bark Key")
         
         bark_config = models.BarkConfig(
             user_id=current_user.id,
-            device_token=config_update.device_token,
+            bark_key=config_update.bark_key,
             server_url=config_update.server_url or "https://api.day.app",
             is_enabled=config_update.is_enabled if config_update.is_enabled is not None else True,
             subscriptions=config_update.subscriptions or ["reserve", "signin", "task", "config"]
@@ -60,8 +60,8 @@ def update_bark_config(
         db.add(bark_config)
     else:
         # 更新现有配置
-        if config_update.device_token is not None:
-            bark_config.device_token = config_update.device_token
+        if config_update.bark_key is not None:
+            bark_config.bark_key = config_update.bark_key
         if config_update.server_url is not None:
             bark_config.server_url = config_update.server_url
         if config_update.is_enabled is not None:

@@ -112,15 +112,15 @@ def send_notification(
         
         # 3. 构建推送URL
         server_url = bark_config.server_url or "https://api.day.app"
-        device_token = bark_config.device_token
+        bark_key = bark_config.bark_key
         
         # URL编码标题和内容
         import urllib.parse
         encoded_title = urllib.parse.quote(title)
         encoded_content = urllib.parse.quote(content)
         
-        # 构建完整URL
-        push_url = f"{server_url}/{device_token}/{encoded_title}/{encoded_content}"
+        # 构建完整URL：https://api.day.app/{key}/{title}/{body}
+        push_url = f"{server_url}/{bark_key}/{encoded_title}/{encoded_content}"
         
         # 添加可选参数
         params = []

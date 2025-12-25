@@ -144,14 +144,14 @@ class Token(BaseModel):
 
 # Bark配置Schemas
 class BarkConfigBase(BaseModel):
-    device_token: Optional[str] = None
+    bark_key: Optional[str] = None
     server_url: Optional[str] = "https://api.day.app"
     is_enabled: Optional[bool] = True
     subscriptions: Optional[list] = ["reserve", "signin", "task", "config"]
 
 
 class BarkConfigUpdate(BaseModel):
-    device_token: Optional[str] = None
+    bark_key: Optional[str] = None
     server_url: Optional[str] = None
     is_enabled: Optional[bool] = None
     subscriptions: Optional[list] = None
