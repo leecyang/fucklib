@@ -29,6 +29,22 @@ def init_db():
                         with database.engine.begin() as conn:
                             conn.execute(text("ALTER TABLE tasks ADD COLUMN remark VARCHAR(500)"))
                         print("Migrated: added tasks.remark column")
+                
+                # Migrate bark_configs table: device_token -> bark_key
+                if inspector.has_table("bark_configs"):
+                    bark_cols = [c['name'] for c in inspector.get_columns('bark_configs')]
+                    if 'device_token' in bark_cols and 'bark_key' not in bark_cols:
+                        with database.engine.begin() as conn:
+                            conn.execute(text("ALTER TABLE bark_configs RENAME COLUMN device_token TO bark_key"))
+                        print("Migrated: renamed bark_configs.device_token to bark_key")
+                
+                # Migrate seat_status_cache table: add delayed_signin_at if missing
+                if inspector.has_table("seat_status_cache"):
+                    cache_cols = [c['name'] for c in inspector.get_columns('seat_status_cache')]
+                    if 'delayed_signin_at' not in cache_cols:
+                        with database.engine.begin() as conn:
+                            conn.execute(text("ALTER TABLE seat_status_cache ADD COLUMN delayed_signin_at TIMESTAMP WITH TIME ZONE"))
+                        print("Migrated: added seat_status_cache.delayed_signin_at column")
             except Exception as e:
                 print(f"Migration check failed: {e}")
             return
