@@ -202,7 +202,11 @@ const InteractiveReserve: React.FC = () => {
     if (!confirmed) return;
 
     try {
-      await libApi.reserveSeat(selectedLib, seatKey);
+      const res = await libApi.reserveSeat(selectedLib, seatKey);
+      if (res?.data && (res.data as any).status === 'restricted') {
+        await customAlert((res.data as any).message || '您的账号当前被限制预约，请稍后再试', '限制预约');
+        return;
+      }
       await customAlert('预约成功！请在规定时间内前往签到。', '预约成功');
       fetchReserveInfo();
       handleLibChange(selectedLib);

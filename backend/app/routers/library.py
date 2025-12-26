@@ -76,12 +76,28 @@ def get_reserve_info(service: LibService = Depends(get_lib_service)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+from app.services import bark_service
+
 @router.post("/reserve")
-def reserve_seat(lib_id: int, seat_key: str, service: LibService = Depends(get_lib_service)):
+def reserve_seat(
+    lib_id: int, 
+    seat_key: str, 
+    service: LibService = Depends(get_lib_service),
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
     try:
         return service.reserve_seat(lib_id, seat_key)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        msg = str(e)
+        lowered = msg.lower()
+        if ('限制预约' in msg) or ('异常预约' in msg) or ('restricted' in lowered):
+            try:
+                bark_service.send_account_restricted_notification(db, current_user.id)
+            except Exception:
+                pass
+            return {"status": "restricted", "message": msg}
+        raise HTTPException(status_code=500, detail=msg)
 
 @router.delete("/reserve")
 def cancel_reserve(service: LibService = Depends(get_lib_service)):

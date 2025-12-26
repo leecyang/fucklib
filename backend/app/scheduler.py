@@ -280,6 +280,25 @@ def run_global_keep_alive():
     logger.info("Starting global keep-alive task...")
     db = database.SessionLocal()
     try:
+        # Ensure required columns exist for adaptive backoff (runtime safety)
+        try:
+            from sqlalchemy import inspect, text
+            inspector = inspect(database.engine)
+            if inspector.has_table("seat_status_cache"):
+                cache_cols = [c['name'] for c in inspector.get_columns('seat_status_cache')]
+                ddl_needed = False
+                with database.engine.begin() as conn:
+                    if 'keepalive_fail_count' not in cache_cols:
+                        conn.execute(text("ALTER TABLE seat_status_cache ADD COLUMN keepalive_fail_count INT DEFAULT 0"))
+                        ddl_needed = True
+                    if 'htmlrule_backoff_until' not in cache_cols:
+                        conn.execute(text("ALTER TABLE seat_status_cache ADD COLUMN htmlrule_backoff_until TIMESTAMP WITH TIME ZONE"))
+                        ddl_needed = True
+                if ddl_needed:
+                    logger.info("Applied runtime migration for seat_status_cache adaptive backoff columns")
+        except Exception as mig_error:
+            logger.warning(f"Adaptive backoff columns check/migration failed: {mig_error}")
+        
         # Fetch users with valid cookie config
         users = db.query(models.User).join(models.WechatConfig).filter(
             models.WechatConfig.cookie != None,
