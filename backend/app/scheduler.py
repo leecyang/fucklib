@@ -292,7 +292,11 @@ def run_global_keep_alive():
                         conn.execute(text("ALTER TABLE seat_status_cache ADD COLUMN keepalive_fail_count INT DEFAULT 0"))
                         ddl_needed = True
                     if 'htmlrule_backoff_until' not in cache_cols:
-                        conn.execute(text("ALTER TABLE seat_status_cache ADD COLUMN htmlrule_backoff_until TIMESTAMP WITH TIME ZONE"))
+                        dialect = database.engine.dialect.name
+                        if dialect == 'mysql':
+                            conn.execute(text("ALTER TABLE seat_status_cache ADD COLUMN htmlrule_backoff_until DATETIME"))
+                        else:
+                            conn.execute(text("ALTER TABLE seat_status_cache ADD COLUMN htmlrule_backoff_until TIMESTAMP WITH TIME ZONE"))
                         ddl_needed = True
                 if ddl_needed:
                     logger.info("Applied runtime migration for seat_status_cache adaptive backoff columns")
