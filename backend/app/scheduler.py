@@ -1,5 +1,6 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy.orm import Session
 from app import crud, models, database, schemas
 from app.services.lib_service import LibService
@@ -35,6 +36,10 @@ def run_seat_task(user_id: int, task_id: int):
             if task:
                 task.last_status = 'failed'
                 task.last_message = '用户未绑定微信 Cookie'
+            try:
+                bark_service.send_cookie_invalid_notification(db, user_id)
+            except Exception as notify_error:
+                logger.error(f"发送Cookie失效通知失败: {notify_error}")
             return
 
         def save_cookie(new_cookie):
@@ -162,7 +167,23 @@ def run_signin_task(user_id: int, task_id: int):
              if task:
                 task.last_status = 'failed'
                 task.last_message = '用户未绑定微信 SessID'
+             try:
+                bark_service.send_sessid_missing_notification(db, user_id)
+             except Exception as notify_error:
+                logger.error(f"发送SessID缺失通知失败: {notify_error}")
              return
+        
+        # 检查蓝牙配置
+        if not user.wechat_config.major or not user.wechat_config.minor:
+            logger.error(f"User {user_id} bluetooth config missing")
+            if task:
+                task.last_status = 'failed'
+                task.last_message = '蓝牙打卡配置缺失（major/minor）'
+            try:
+                bark_service.send_bluetooth_missing_notification(db, user_id)
+            except Exception as notify_error:
+                logger.error(f"发送蓝牙配置缺失通知失败: {notify_error}")
+            return
 
         try:
             if user.wechat_config.cookie:
@@ -249,6 +270,59 @@ def remove_task_job(task_id: int):
         scheduler.remove_job(job_id)
         logger.info(f"Removed job {job_id}")
 
+def run_global_keep_alive():
+    """
+    Global background task to refresh cookies for all users.
+    Runs independently of user-defined tasks.
+    """
+    logger.info("Starting global keep-alive task...")
+    db = database.SessionLocal()
+    try:
+        # Fetch users with valid cookie config
+        users = db.query(models.User).join(models.WechatConfig).filter(
+            models.WechatConfig.cookie != None,
+            models.WechatConfig.cookie != ''
+        ).all()
+        
+        logger.info(f"Found {len(users)} users for keep-alive check")
+        
+        for user in users:
+            try:
+                if not user.wechat_config or not user.wechat_config.cookie:
+                    continue
+                    
+                # Define callback to save updated cookie
+                # We need to capture user_id to query fresh if needed, but 'user' object is attached to session
+                def save_cookie(new_cookie):
+                    try:
+                        # Ensure we are working with the latest state
+                        user.wechat_config.cookie = new_cookie
+                        db.add(user.wechat_config)
+                        db.commit()
+                    except Exception as e:
+                        logger.error(f"Failed to save cookie for user {user.id}: {e}")
+
+                # Initialize service with current cookie
+                service = LibService(user.wechat_config.cookie, save_cookie)
+                
+                # Execute keep-alive logic (htmlRule + index)
+                service.keep_alive()
+                
+            except Exception as e:
+                # Log but do not stop processing other users
+                logger.warning(f"Keep-alive failed for user {user.id}: {e}")
+                emsg = str(e).lower()
+                try:
+                    if '40001' in emsg or 'cookie失效' in emsg or '403' in emsg:
+                        bark_service.send_cookie_invalid_notification(db, user.id)
+                except Exception as notify_error:
+                    logger.error(f"发送Cookie失效通知失败: {notify_error}")
+                
+    except Exception as e:
+        logger.error(f"Global keep-alive task critical failure: {e}")
+    finally:
+        db.close()
+
 def start_scheduler():
     # Load tasks
     db = database.SessionLocal()
@@ -260,6 +334,24 @@ def start_scheduler():
                 task.task_type = 'reserve'
                 db.commit()
             add_task_job(task)
+            
+        # --- Add Global Keep-Alive Job ---
+        # This ensures cookies are refreshed automatically in the background
+        # without user intervention.
+        keep_alive_job_id = 'global_keep_alive'
+        if not scheduler.get_job(keep_alive_job_id):
+            try:
+                scheduler.add_job(
+                    run_global_keep_alive,
+                    IntervalTrigger(minutes=1, seconds=47),
+                    id=keep_alive_job_id,
+                    replace_existing=True,
+                    name="Global Cookie Keep-Alive"
+                )
+                logger.info(f"Registered system job: {keep_alive_job_id}")
+            except Exception as e:
+                logger.error(f"Failed to register global keep-alive job: {e}")
+                
     except Exception as e:
         logger.error(f"Failed to load tasks: {e}")
     finally:

@@ -32,6 +32,7 @@ class NotificationType:
     # 配置相关
     COOKIE_INVALID = "cookie_invalid"
     BLUETOOTH_MISSING = "bluetooth_missing"
+    SESSID_MISSING = "sessid_missing"
     
     # 系统提醒
     DAILY_SUMMARY = "daily_summary"
@@ -196,6 +197,32 @@ def send_cookie_invalid_notification(db: Session, user_id: int) -> bool:
         content="您的微信Cookie已失效或被限制，请重新扫码登录以恢复自动预约功能",
         icon="🔐",
         force=True  # Cookie失效是关键通知，强制发送
+    )
+
+
+def send_sessid_missing_notification(db: Session, user_id: int) -> bool:
+    """发送SessID缺失通知"""
+    return send_notification(
+        db=db,
+        user_id=user_id,
+        notification_type=NotificationType.SESSID_MISSING,
+        title="🔧 WeChat SessID 缺失",
+        content="未绑定微信 SessID，请通过扫码绑定以启用蓝牙自动签到",
+        icon="🧩",
+        force=True
+    )
+
+
+def send_bluetooth_missing_notification(db: Session, user_id: int) -> bool:
+    """发送蓝牙配置缺失通知"""
+    return send_notification(
+        db=db,
+        user_id=user_id,
+        notification_type=NotificationType.BLUETOOTH_MISSING,
+        title="📶 蓝牙配置缺失",
+        content="蓝牙打卡配置未完整设置（major/minor），请在设置中补充以启用自动签到",
+        icon="📡",
+        force=True
     )
 
 

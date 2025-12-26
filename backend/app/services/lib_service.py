@@ -46,9 +46,18 @@ class LibService:
         self._init_cookie()
 
     def _init_cookie(self):
-        # Do not preset SERVERID to avoid hitting wrong backend node
-        self.cookie = self.cookie + '; FROM_TYPE=weixin; v=5.5; Hm_lvt_7ecd21a13263a714793f376c18038a87=1713417820,1714277047,1714304621,1714376091; ' \
-                               'Hm_lpvt_7ecd21a13263a714793f376c18038a87=' + str(int(time.time() - 1))
+        self.cookie = (
+            self.cookie
+            + '; FROM_TYPE=weixin; v=5.5; '
+            + 'Hm_lvt_7ecd21a13263a714793f376c18038a87=1713417820,1714277047,1714304621,1714376091; '
+            + 'Hm_lpvt_7ecd21a13263a714793f376c18038a87='
+            + str(int(time.time() - 1))
+            + '; SERVERID='
+            + random.choice(self.SERVERID)
+            + '|'
+            + str(int(time.time() - 1))
+            + '|1714376087'
+        )
         self.headers['Cookie'] = self.cookie
         self.session.headers.update(self.headers)
 
@@ -466,6 +475,43 @@ class LibService:
             })
         except Exception:
             pass
+
+    def keep_alive(self):
+        """
+        Refreshes the cookie using the specific htmlRule query and keeps the session active.
+        Corresponds to cookie_update() and wechat_update() in original crawldata.py.
+        """
+        try:
+            # 1. Cookie Update (GraphQL htmlRule) - Critical for token renewal
+            rule_payload = {
+                "operationName": "htmlRule", 
+                "query": "query htmlRule {\n userAuth {\n rule {\n htmlRule\n }\n }\n}"
+            }
+            # _post handles response cookies automatically via _update_cookies
+            self._post(rule_payload)
+            
+            # 2. WeChat Session Update (GET Request) - Simulates user activity
+            url = 'https://wechat.v2.traceint.com/index.php/reserve/index.html?f=wechat'
+            
+            # Use headers similar to browser/original script
+            headers = self.headers.copy()
+            headers.update({
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Upgrade-Insecure-Requests': '1'
+            })
+            
+            r = self.session.get(url, headers=headers, timeout=10)
+            if r.cookies:
+                self._update_cookies(r.cookies.get_dict())
+                
+            logger.info("Keep-alive executed successfully")
+            
+        except Exception as e:
+            logger.error(f"Keep-alive failed: {e}")
+            # Do not raise, as we want to be resilient in background tasks
 
     # --- Check In (Integral) ---
     def check_in_integral(self):
