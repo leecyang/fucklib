@@ -290,3 +290,15 @@ def send_expiration_notification(db: Session, user_id: int, minutes_left: int) -
         icon="⏳",
         force=True  # 过期提醒是高优先级通知
     )
+
+def send_account_restricted_notification(db: Session, user_id: int) -> bool:
+    """发送账号被限制预约通知"""
+    return send_notification(
+        db=db,
+        user_id=user_id,
+        notification_type=NotificationType.ACCOUNT_RESTRICTED,
+        title="🚫 账号被限制预约",
+        content="系统检测到您的账号预约功能被限制。建议稍后重试或减少频繁访问，必要时重新授权。",
+        icon="⛔",
+        force=True
+    )

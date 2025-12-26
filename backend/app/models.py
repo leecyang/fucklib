@@ -133,4 +133,8 @@ class SeatStatusCache(Base):
     # 延迟签到（用于监督举报后的自动签到）
     delayed_signin_at = Column(DateTime(timezone=True), nullable=True)  # 计划执行延迟签到的时间
     
+    # 保活节流
+    keepalive_fail_count = Column(Integer, default=0)
+    htmlrule_backoff_until = Column(DateTime(timezone=True), nullable=True)
+    
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

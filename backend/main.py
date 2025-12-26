@@ -45,6 +45,14 @@ def init_db():
                         with database.engine.begin() as conn:
                             conn.execute(text("ALTER TABLE seat_status_cache ADD COLUMN delayed_signin_at TIMESTAMP WITH TIME ZONE"))
                         print("Migrated: added seat_status_cache.delayed_signin_at column")
+                    if 'keepalive_fail_count' not in cache_cols:
+                        with database.engine.begin() as conn:
+                            conn.execute(text("ALTER TABLE seat_status_cache ADD COLUMN keepalive_fail_count INT DEFAULT 0"))
+                        print("Migrated: added seat_status_cache.keepalive_fail_count column")
+                    if 'htmlrule_backoff_until' not in cache_cols:
+                        with database.engine.begin() as conn:
+                            conn.execute(text("ALTER TABLE seat_status_cache ADD COLUMN htmlrule_backoff_until TIMESTAMP WITH TIME ZONE"))
+                        print("Migrated: added seat_status_cache.htmlrule_backoff_until column")
             except Exception as e:
                 print(f"Migration check failed: {e}")
             return

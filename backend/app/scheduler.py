@@ -7,8 +7,10 @@ from app.services.lib_service import LibService
 from app.services.auth_service import AuthService
 from app.services import bark_service
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.sql import func
+import random
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -286,6 +288,11 @@ def run_global_keep_alive():
         
         logger.info(f"Found {len(users)} users for keep-alive check")
         
+        try:
+            random.shuffle(users)
+        except Exception:
+            pass
+        
         for user in users:
             try:
                 if not user.wechat_config or not user.wechat_config.cookie:
@@ -305,8 +312,43 @@ def run_global_keep_alive():
                 # Initialize service with current cookie
                 service = LibService(user.wechat_config.cookie, save_cookie)
                 
-                # Execute keep-alive logic (htmlRule + index)
-                service.keep_alive()
+                try:
+                    time.sleep(random.uniform(0.2, 1.0))
+                except Exception:
+                    pass
+                
+                tz = getattr(scheduler, 'timezone', None)
+                now = datetime.now(tz) if tz else datetime.now()
+                cache = db.query(models.SeatStatusCache).filter(models.SeatStatusCache.user_id == user.id).first()
+                if not cache:
+                    cache = models.SeatStatusCache(user_id=user.id, keepalive_fail_count=0)
+                    db.add(cache)
+                    db.commit()
+                    db.refresh(cache)
+                
+                do_htmlrule = True
+                if cache.htmlrule_backoff_until and cache.htmlrule_backoff_until > now:
+                    do_htmlrule = False
+                
+                status = service.keep_alive(do_htmlrule=do_htmlrule)
+                page_ok = bool((status or {}).get('page_ok'))
+                htmlrule_ok = bool((status or {}).get('htmlrule_ok'))
+                
+                if htmlrule_ok:
+                    cache.keepalive_fail_count = 0
+                    cache.htmlrule_backoff_until = None
+                    db.add(cache)
+                    db.commit()
+                elif page_ok and not htmlrule_ok:
+                    cache.keepalive_fail_count = (cache.keepalive_fail_count or 0) + 1
+                    if cache.keepalive_fail_count >= 2:
+                        cache.htmlrule_backoff_until = now + timedelta(minutes=30)
+                        try:
+                            bark_service.send_account_restricted_notification(db, user.id)
+                        except Exception as notify_error:
+                            logger.error(f"发送账号限制通知失败: {notify_error}")
+                    db.add(cache)
+                    db.commit()
                 
             except Exception as e:
                 # Log but do not stop processing other users

@@ -476,24 +476,23 @@ class LibService:
         except Exception:
             pass
 
-    def keep_alive(self):
+    def keep_alive(self, do_htmlrule: bool = True):
         """
-        Refreshes the cookie using the specific htmlRule query and keeps the session active.
-        Corresponds to cookie_update() and wechat_update() in original crawldata.py.
+        执行保活：
+        1) 先模拟页面访问，提高真实度并尽量避免风控
+        2) 再调用 htmlRule 刷新令牌
+        3) 返回细粒度状态，便于调度层区分 Cookie 失效 vs 账号限制
         """
+        page_ok = False
+        htmlrule_ok = False
         try:
-            # 1. Cookie Update (GraphQL htmlRule) - Critical for token renewal
-            rule_payload = {
-                "operationName": "htmlRule", 
-                "query": "query htmlRule {\n userAuth {\n rule {\n htmlRule\n }\n }\n}"
-            }
-            # _post handles response cookies automatically via _update_cookies
-            self._post(rule_payload)
-            
-            # 2. WeChat Session Update (GET Request) - Simulates user activity
+            # 0) 轻微抖动，避免所有用户同一时刻命中风控
+            try:
+                time.sleep(random.uniform(0.1, 0.6))
+            except Exception:
+                pass
+            # 1) WeChat Session Update (GET Request) - Simulates user activity
             url = 'https://wechat.v2.traceint.com/index.php/reserve/index.html?f=wechat'
-            
-            # Use headers similar to browser/original script
             headers = self.headers.copy()
             headers.update({
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -502,16 +501,26 @@ class LibService:
                 'Sec-Fetch-Site': 'none',
                 'Upgrade-Insecure-Requests': '1'
             })
-            
             r = self.session.get(url, headers=headers, timeout=10)
             if r.cookies:
                 self._update_cookies(r.cookies.get_dict())
-                
-            logger.info("Keep-alive executed successfully")
-            
+            page_ok = True
+            # 2) Cookie Update (GraphQL htmlRule) - Critical for token renewal
+            if do_htmlrule:
+                rule_payload = {
+                    "operationName": "htmlRule", 
+                    "query": "query htmlRule {\n userAuth {\n rule {\n htmlRule\n }\n }\n}"
+                }
+                try:
+                    self._post(rule_payload)
+                    htmlrule_ok = True
+                except Exception as e:
+                    logger.error(f"Keep-alive failed: {e}")
+            # 3) 返回细粒度状态
+            return {"page_ok": page_ok, "htmlrule_ok": htmlrule_ok}
         except Exception as e:
-            logger.error(f"Keep-alive failed: {e}")
-            # Do not raise, as we want to be resilient in background tasks
+            logger.error(f"Keep-alive critical failure: {e}")
+            return {"page_ok": page_ok, "htmlrule_ok": htmlrule_ok}
 
     # --- Check In (Integral) ---
     def check_in_integral(self):
