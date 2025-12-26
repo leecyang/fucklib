@@ -1,34 +1,61 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import sys
+import os
+
+# Fix import path for Vercel
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from app import models, database, scheduler, crud
 from sqlalchemy import inspect, text
-from app.routers import auth, library, admin, tasks
+from app.routers import auth, library, admin, tasks, cron, bark
 import time
 from sqlalchemy.exc import OperationalError
 
 # Create DB Tables with retry logic
 def init_db():
-    retries = 5
+    # In Vercel, we might want to be careful not to lock DB, but create_all is safe
+    retries = 3
     while retries > 0:
         try:
             models.Base.metadata.create_all(bind=database.engine)
             print("Database tables created successfully")
             try:
                 inspector = inspect(database.engine)
-                cols = [c['name'] for c in inspector.get_columns('tasks')]
-                if 'remark' not in cols:
-                    with database.engine.begin() as conn:
-                        conn.execute(text("ALTER TABLE tasks ADD COLUMN remark VARCHAR(500)"))
-                    print("Migrated: added tasks.remark column")
+                # Check if tasks table exists first
+                if inspector.has_table("tasks"):
+                    cols = [c['name'] for c in inspector.get_columns('tasks')]
+                    if 'remark' not in cols:
+                        with database.engine.begin() as conn:
+                            conn.execute(text("ALTER TABLE tasks ADD COLUMN remark VARCHAR(500)"))
+                        print("Migrated: added tasks.remark column")
+                
+                # Migrate bark_configs table: device_token -> bark_key
+                if inspector.has_table("bark_configs"):
+                    bark_cols = [c['name'] for c in inspector.get_columns('bark_configs')]
+                    if 'device_token' in bark_cols and 'bark_key' not in bark_cols:
+                        with database.engine.begin() as conn:
+                            conn.execute(text("ALTER TABLE bark_configs RENAME COLUMN device_token TO bark_key"))
+                        print("Migrated: renamed bark_configs.device_token to bark_key")
+                
+                # Migrate seat_status_cache table: add delayed_signin_at if missing
+                if inspector.has_table("seat_status_cache"):
+                    cache_cols = [c['name'] for c in inspector.get_columns('seat_status_cache')]
+                    if 'delayed_signin_at' not in cache_cols:
+                        with database.engine.begin() as conn:
+                            conn.execute(text("ALTER TABLE seat_status_cache ADD COLUMN delayed_signin_at TIMESTAMP WITH TIME ZONE"))
+                        print("Migrated: added seat_status_cache.delayed_signin_at column")
             except Exception as e:
                 print(f"Migration check failed: {e}")
             return
         except OperationalError as e:
             retries -= 1
-            print(f"Database connection failed. Retrying in 5 seconds... ({retries} retries left)")
-            time.sleep(5)
+            print(f"Database connection failed. Retrying in 2 seconds... ({retries} retries left)")
+            time.sleep(2)
     print("Could not connect to the database after several retries.")
 
+# On Vercel, this module is loaded once per cold start.
+# We call init_db() to ensure tables exist.
 init_db()
 
 app = FastAPI(title="FuckLib 自助图书馆 API")
@@ -47,11 +74,16 @@ app.include_router(auth.router)
 app.include_router(library.router)
 app.include_router(admin.router)
 app.include_router(tasks.router)
+app.include_router(cron.router)
+app.include_router(bark.router)
 
 @app.on_event("startup")
 def startup_event():
-    scheduler.start_scheduler()
-    
+    if not os.getenv("VERCEL"):
+        scheduler.start_scheduler()
+    else:
+        print("Running on Vercel: Background scheduler disabled.")
+
     # Seed Invite Code
     db = database.SessionLocal()
     try:

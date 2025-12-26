@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app import crud, models, database, schemas
 from app.services.lib_service import LibService
 from app.services.auth_service import AuthService
+from app.services import bark_service
 import logging
 from datetime import datetime
 from sqlalchemy.sql import func
@@ -109,6 +110,13 @@ def run_seat_task(user_id: int, task_id: int):
         if success:
             task.last_status = 'success'
             task.last_message = '执行成功'
+            # 发送预约成功通知
+            try:
+                reserve_info = service.get_reserve_info()
+                if reserve_info:
+                    bark_service.send_reserve_success_notification(db, user_id, reserve_info)
+            except Exception as notify_error:
+                logger.error(f"发送预约成功通知失败: {notify_error}")
         else:
             # If all seats were occupied or attempts failed
             if last_error:
@@ -118,9 +126,25 @@ def run_seat_task(user_id: int, task_id: int):
 
     except Exception as e:
         logger.error(f"Task {task_id} failed: {e}")
+        error_msg = str(e)
+        
         if task:
             task.last_status = 'failed'
-            task.last_message = str(e)
+            task.last_message = error_msg
+            
+            #检测Cookie失效并发送通知
+            if '40001' in error_msg.lower() or 'cookie失效' in error_msg.lower() or '403' in error_msg:
+                try:
+                    bark_service.send_cookie_invalid_notification(db, user_id)
+                except Exception as notify_error:
+                    logger.error(f"发送Cookie失效通知失败: {notify_error}")
+            else:
+                # 发送预约失败通知（非Cookie问题）
+                try:
+                    bark_service.send_reserve_failed_notification(db, user_id, error_msg)
+                except Exception as notify_error:
+                    logger.error(f"发送预约失败通知失败: {notify_error}")
+                    
     finally:
         if task:
             task.last_run = func.now()
@@ -157,11 +181,28 @@ def run_signin_task(user_id: int, task_id: int):
         res = AuthService.sign_in(user.wechat_config.sess_id, user.wechat_config.major, user.wechat_config.minor)
         task.last_status = 'success'
         task.last_message = res
+        # 发送签到成功通知
+        try:
+            bark_service.send_signin_success_notification(db, user_id)
+        except Exception as notify_error:
+            logger.error(f"发送签到成功通知失败: {notify_error}")
     except Exception as e:
         logger.error(f"Task {task_id} failed: {e}")
         if task:
             task.last_status = 'failed'
             task.last_message = str(e)
+            # 发送签到失败通知
+            try:
+                bark_service.send_notification(
+                    db=db,
+                    user_id=user_id,
+                    notification_type=bark_service.NotificationType.SIGNIN_FAILED,
+                    title="❌ 签到失败",
+                    content=f"签到失败：{str(e)}，请检查蓝牙配置或手动操作",
+                    icon="🔴"
+                )
+            except Exception as notify_error:
+                logger.error(f"发送签到失败通知失败: {notify_error}")
     finally:
         if task:
             task.last_run = func.now()

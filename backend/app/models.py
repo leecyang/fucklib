@@ -72,3 +72,65 @@ class Task(Base):
     remark = Column(String(500), nullable=True)
     
     user = relationship("User", back_populates="tasks")
+
+
+class BarkConfig(Base):
+    """Bark推送配置表"""
+    __tablename__ = "bark_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    
+    # Bark配置
+    bark_key = Column(String(255), nullable=False)  # Bark推送Key（从URL中提取）
+    server_url = Column(String(255), default="https://api.day.app")  # 自定义服务器
+    is_enabled = Column(Boolean, default=True)  # 是否启用推送
+    
+    # 订阅配置（JSON数组，如["reserve", "signin", "task", "config"]）
+    subscriptions = Column(JSON, default=["reserve", "signin", "task", "config"])
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class BarkNotification(Base):
+    """Bark通知历史记录表"""
+    __tablename__ = "bark_notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # 通知内容
+    notification_type = Column(String(50), nullable=False)  # 通知类型，如"reserve_success"
+    title = Column(String(255), nullable=False)  # 通知标题
+    content = Column(String(500), nullable=False)  # 通知内容
+    icon = Column(String(50), nullable=True)  # 通知图标
+    url = Column(String(500), nullable=True)  # 跳转链接
+    
+    # 发送状态
+    status = Column(String(20), default="pending")  # pending/success/failed
+    error_message = Column(String(255), nullable=True)  # 错误信息
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class SeatStatusCache(Base):
+    """座位状态缓存表，用于监控任务"""
+    __tablename__ = "seat_status_cache"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    
+    # 状态记录
+    last_status = Column(Integer, nullable=True)  # 上次检测的座位状态 1-5
+    last_exp_date = Column(String(50), nullable=True)  # 上次检测的过期时间
+    
+    # 通知标志（避免重复通知）
+    supervised_notified = Column(Boolean, default=False)  # 是否已发送监督举报通知
+    expiration_notified = Column(Boolean, default=False)  # 是否已发送过期提醒
+    cookie_invalid_notified = Column(Boolean, default=False)  # 是否已发送Cookie失效通知
+    
+    # 延迟签到（用于监督举报后的自动签到）
+    delayed_signin_at = Column(DateTime(timezone=True), nullable=True)  # 计划执行延迟签到的时间
+    
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

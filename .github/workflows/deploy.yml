@@ -1,12 +1,13 @@
 name: Deploy
-# Triggering release v2.0 deployment
+# This workflow is disabled on deploy/vercel-supabase branch
+# Docker compose deployment is handled by release branches
 
-on:
-  push:
-    branches: ["release/v2.0"]
+# on:
+#   push:
+#     branches: ["main"]
 
 concurrency:
-  group: fucklib-deploy-v2.0
+  group: fucklib-deploy-main
   cancel-in-progress: true
 
 jobs:
@@ -25,6 +26,6 @@ jobs:
             set -e
             cd /root/fucklib
             git fetch origin
-            git reset --hard origin/release/v2.0
+            git reset --hard origin/main
             git clean -fd
             docker compose up -d --build
