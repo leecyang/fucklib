@@ -306,8 +306,8 @@ const ScheduledTasks: React.FC = () => {
                                 </span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-slate-500">备注</span>
-                                <span className="text-slate-900">{task.remark || '-'}</span>
+                                <span className="text-slate-500 shrink-0 mr-2">备注</span>
+                                <span className="text-slate-900 break-all text-right">{task.remark || '-'}</span>
                             </div>
                             {task.last_message && (
                                 <div className="text-xs text-slate-400 mt-1 truncate bg-slate-50 p-2 rounded">

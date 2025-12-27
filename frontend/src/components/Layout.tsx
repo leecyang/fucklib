@@ -63,8 +63,8 @@ export default function Layout() {
 
       {/* Main Content Area */}
       <main className="flex-1 relative overflow-y-auto w-full">
-        {/* Mobile Header (Optional, if we want a title bar on mobile) */}
-        <div className="md:hidden sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center justify-between w-full">
+        {/* Mobile Header (Fixed) */}
+        <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center justify-between">
             <h1 className="text-lg font-bold text-indigo-600 flex items-center gap-2">
                 <BookOpen className="w-6 h-6" />
                 FuckLib
@@ -72,8 +72,8 @@ export default function Layout() {
             <div />
         </div>
 
-        {/* Content Container - Added pt-16 for mobile header and pb-24 for bottom nav */}
-        <div className="p-4 pt-16 md:pt-8 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto">
+        {/* Content Container - Added pt-20 for mobile header and pb-24 for bottom nav */}
+        <div className="p-4 pt-20 md:pt-8 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto">
           <Outlet />
         </div>
       </main>
