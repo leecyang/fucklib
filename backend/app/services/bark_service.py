@@ -121,12 +121,18 @@ def send_notification(
         encoded_content = urllib.parse.quote(content)
         
         # 构建完整URL：https://api.day.app/{key}/{title}/{body}
+        # 将 emoji 图标拼接到标题前
+        full_title = f"{icon} {title}" if icon else title
+        encoded_title = urllib.parse.quote(full_title)
+        encoded_content = urllib.parse.quote(content)
+        
         push_url = f"{server_url}/{bark_key}/{encoded_title}/{encoded_content}"
         
         # 添加可选参数
         params = []
-        if icon:
-            params.append(f"icon={urllib.parse.quote(icon)}")
+        # 使用固定网站图标
+        params.append(f"icon={urllib.parse.quote('https://lingxilearn.cn/vite.svg')}")
+        
         if url:
             params.append(f"url={urllib.parse.quote(url)}")
         

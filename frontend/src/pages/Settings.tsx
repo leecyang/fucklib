@@ -381,7 +381,7 @@ export default function Settings() {
               onChange={(e) => setBarkConfig({ ...barkConfig, bark_key: e.target.value })}
             />
             <p className="text-xs text-slate-500 mt-1">
-              打开Bark应用，复制推送URL，提取其中的Key部分（如：dCbMxKjM9iV7mKAGuGUsuf）
+              打开Bark应用，复制推送URL，提取其中的Key部分（如：dCbMxKjM9iV7mKAGuxxxxx）
             </p>
           </div>
 
