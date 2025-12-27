@@ -345,7 +345,7 @@ const InteractiveReserve: React.FC = () => {
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-md border-b border-slate-200 -mx-4 md:-mx-8 px-4 md:px-8 py-4 mb-6 flex flex-col md:flex-row gap-4 md:items-center justify-between shadow-sm">
+      <div className="sticky top-[53px] md:top-0 z-20 bg-slate-50/90 backdrop-blur-md border-b border-slate-200 -mx-4 md:-mx-8 px-4 md:px-8 py-4 mb-6 flex flex-col md:flex-row gap-4 md:items-center justify-between shadow-sm">
          <div className="flex-1 max-w-md">
              <div className="relative">
                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />

@@ -151,8 +151,8 @@ export default function Dashboard() {
                                 <div className="opacity-70">状态</div>
                                 {(() => {
                                   const status = seat.status;
-                                  const text = seat.selection_status === 'reserved'
-                                    ? '未签到'
+                                  const text = (seat.selection_status === 'reserved' || status === 1)
+                                    ? '待签到'
                                     : status === 2
                                       ? '已签到'
                                       : status === 3
