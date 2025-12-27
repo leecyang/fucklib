@@ -72,8 +72,8 @@ export default function Layout() {
             <div />
         </div>
 
-        {/* Content Container - Added pb-24 for mobile nav clearance */}
-        <div className="p-4 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto">
+        {/* Content Container - Added pt-16 for mobile header and pb-24 for bottom nav */}
+        <div className="p-4 pt-16 md:pt-8 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto">
           <Outlet />
         </div>
       </main>

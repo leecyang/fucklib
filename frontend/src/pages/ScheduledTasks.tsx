@@ -223,13 +223,20 @@ const ScheduledTasks: React.FC = () => {
                                     {task.last_run ? new Date(task.last_run).toLocaleString() : '-'}
                                 </td>
                                 <td className="px-6 py-4">
-                                    <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium", 
-                                        task.last_status === 'success' ? "bg-emerald-50 text-emerald-700" : 
-                                        task.last_status ? "bg-rose-50 text-rose-700" : "bg-slate-100 text-slate-500"
-                                    )}>
-                                        {task.last_status === 'success' ? <CheckCircle2 className="w-3 h-3"/> : task.last_status ? <AlertCircle className="w-3 h-3"/> : null}
-                                        {task.last_status || '等待中'}
-                                    </span>
+                                    <div className="space-y-1">
+                                        <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium", 
+                                            task.last_status === 'success' ? "bg-emerald-50 text-emerald-700" : 
+                                            task.last_status ? "bg-rose-50 text-rose-700" : "bg-slate-100 text-slate-500"
+                                        )}>
+                                            {task.last_status === 'success' ? <CheckCircle2 className="w-3 h-3"/> : task.last_status ? <AlertCircle className="w-3 h-3"/> : null}
+                                            {task.last_status || '等待中'}
+                                        </span>
+                                        {task.last_message && (
+                                            <div className="text-xs text-slate-400 truncate max-w-[320px]">
+                                                {task.last_message}
+                                            </div>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-2">
@@ -311,7 +318,7 @@ const ScheduledTasks: React.FC = () => {
 
                         <button 
                             onClick={() => handleDelete(task.id)}
-                            className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 p-1"
+                            className="mt-3 ml-auto flex items-center gap-1 text-slate-400 hover:text-rose-600 p-2 hover:bg-rose-50 rounded-lg"
                         >
                             <Trash2 className="w-4 h-4" />
                         </button>
