@@ -210,7 +210,8 @@ class LibService:
              logger.info("DEBUG: userAuth object not found in response data")
 
         if 'errors' in data:
-            raise Exception(data['errors'][0].get('message', 'Unknown API Error'))
+            error_item = data['errors'][0]
+            raise Exception(error_item.get('msg') or error_item.get('message') or 'Unknown API Error')
         
         # Safe access to data.get('data') which might be None
         user_auth = (data.get('data') or {}).get('userAuth')
@@ -281,7 +282,8 @@ class LibService:
                 return True
 
         if 'errors' in res:
-            raise Exception(res['errors'][0].get('message', 'Reserve Failed'))
+            error_item = res['errors'][0]
+            raise Exception(error_item.get('msg') or error_item.get('message') or 'Reserve Failed')
         
         raise Exception('预约失败：系统未确认座位，请稍后重试')
 
@@ -315,7 +317,8 @@ class LibService:
                 code = e.get('code')
                 if ('退座成功' in str(msg)) or (code == 1 and ('退' in str(msg))):
                     return {"message": "退预选座位成功"}
-            raise Exception(errs[0].get('message', 'Cancel Failed'))
+            error_item = errs[0]
+            raise Exception(error_item.get('msg') or error_item.get('message') or 'Cancel Failed')
         
         return res.get('data', {}).get('userAuth', {}).get('reserve', {}).get('reserveCancle')
 
@@ -500,7 +503,8 @@ class LibService:
             }
             res = self._post(save_payload)
             if 'errors' in res:
-                 raise Exception(res['errors'][0].get('message', 'Prereserve Failed'))
+                 error_item = res['errors'][0]
+                 raise Exception(error_item.get('msg') or error_item.get('message') or 'Prereserve Failed')
             return True
         else:
             raise Exception(f"Prereserve Check Failed: {msg}")

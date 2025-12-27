@@ -38,14 +38,14 @@ api.interceptors.response.use(
         detailStr.includes("'code': 1")
       )
     ) {
-      alert('您的账号当前被限制预约，请在设置页查看解除时间或稍后再试', '限制预约');
+      alert('您的账号当前被限制预约，明日7:45后解除限制', '限制预约');
     } else if (
       detailStr.includes('预约限制') ||
       detailStr.includes('被限制预约') ||
       msg.includes('临时限制') ||
       msg.includes('40001')
     ) {
-      alert('您的账号当前被限制预约，请在设置页查看解除时间或稍后再试', '限制预约');
+      alert('您的账号当前被限制预约，明日7:45后解除限制', '限制预约');
     } else if (status === 403 || status === 500 || msg.includes('40001') || msg.includes('access denied') || msg.includes('临时限制')) {
       // Handle 500 errors that might contain JSON in detail (Flask behavior)
       let isBan = false;
@@ -61,7 +61,7 @@ api.interceptors.response.use(
       }
 
       if (isBan) {
-        alert('您因尝试预约非法座位导致账号被封禁', '账号被封禁');
+        alert('您的账号当前被限制预约，明日7:45后解除限制', '账号被封禁');
         // Force refresh user info to show ban status in settings
         libApi.getUserInfo().catch(console.error);
       } else if (status !== 500) {
