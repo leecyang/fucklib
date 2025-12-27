@@ -412,6 +412,12 @@ def run_global_keep_alive():
                                             db.add(user.wechat_config)
                                             db.commit()
                                             logger.info(f"Deactivated cookies for user {user.id} due to persistent failures.")
+                                            
+                                            # Send notification about account restriction/data clearing
+                                            try:
+                                                bark_service.send_account_restricted_notification(db, user.id)
+                                            except Exception as notify_error:
+                                                logger.error(f"发送账号限制通知失败: {notify_error}")
                                     except Exception as db_error:
                                         logger.error(f"Failed to deactivate cookies for user {user.id}: {db_error}")
 
