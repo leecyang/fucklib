@@ -342,6 +342,7 @@ def run_global_keep_alive():
                 
                 tz = getattr(scheduler, 'timezone', None)
                 now = datetime.now(tz) if tz else datetime.now()
+                now_naive = now.replace(tzinfo=None)
                 cache = db.query(models.SeatStatusCache).filter(models.SeatStatusCache.user_id == user.id).first()
                 if not cache:
                     cache = models.SeatStatusCache(user_id=user.id, keepalive_fail_count=0)
@@ -350,8 +351,20 @@ def run_global_keep_alive():
                     db.refresh(cache)
                 
                 do_htmlrule = True
-                if cache.htmlrule_backoff_until and cache.htmlrule_backoff_until > now:
-                    do_htmlrule = False
+                if cache.htmlrule_backoff_until:
+                    try:
+                        backoff_time = cache.htmlrule_backoff_until
+                        if backoff_time.tzinfo is not None:
+                            cmp_now = now
+                            backoff_cmp = backoff_time
+                        else:
+                            cmp_now = now_naive
+                            backoff_cmp = backoff_time
+                        if backoff_cmp > cmp_now:
+                            do_htmlrule = False
+                    except Exception as cmp_error:
+                        logger.warning(f"Backoff time compare failed for user {user.id}: {cmp_error}")
+                        do_htmlrule = False
                 
                 status = service.keep_alive(do_htmlrule=do_htmlrule)
                 page_ok = bool((status or {}).get('page_ok'))
@@ -365,7 +378,7 @@ def run_global_keep_alive():
                 elif page_ok and not htmlrule_ok:
                     cache.keepalive_fail_count = (cache.keepalive_fail_count or 0) + 1
                     if cache.keepalive_fail_count >= 2:
-                        cache.htmlrule_backoff_until = now + timedelta(minutes=30)
+                        cache.htmlrule_backoff_until = now_naive + timedelta(minutes=30)
                         try:
                             bark_service.send_account_restricted_notification(db, user.id)
                         except Exception as notify_error:
