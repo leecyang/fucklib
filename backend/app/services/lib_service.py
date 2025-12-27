@@ -515,15 +515,15 @@ class LibService:
         except Exception:
             pass
 
-    def keep_alive(self, do_htmlrule: bool = True):
+    def keep_alive(self, do_keepalive_query: bool = True):
         """
         执行保活：
         1) 先模拟页面访问，提高真实度并尽量避免风控
-        2) 再调用 htmlRule 刷新令牌
+        2) 再调用 getUserCancleConfig (原 htmlRule) 刷新令牌
         3) 返回细粒度状态，便于调度层区分 Cookie 失效 vs 账号限制
         """
         page_ok = False
-        htmlrule_ok = False
+        api_ok = False
         try:
             # 0) 轻微抖动，避免所有用户同一时刻命中风控
             try:
@@ -544,22 +544,24 @@ class LibService:
             if r.cookies:
                 self._update_cookies(r.cookies.get_dict())
             page_ok = True
-            # 2) Cookie Update (GraphQL htmlRule) - Critical for token renewal
-            if do_htmlrule:
+            # 2) Cookie Update (GraphQL getUserCancleConfig) - Critical for token renewal
+            # Replaced htmlRule with getUserCancleConfig as per auto-go-library reference
+            if do_keepalive_query:
                 rule_payload = {
-                    "operationName": "htmlRule", 
-                    "query": "query htmlRule {\n userAuth {\n rule {\n htmlRule\n }\n }\n}"
+                    "operationName": "getUserCancleConfig",
+                    "query": "query getUserCancleConfig {\n userAuth {\n user {\n holdValidate: getSchConfig(fields: \"hold_validate\", extra: true)\n }\n }\n}",
+                    "variables": {}
                 }
                 try:
                     self._post(rule_payload)
-                    htmlrule_ok = True
+                    api_ok = True
                 except Exception as e:
-                    logger.error(f"Keep-alive failed: {e}")
+                    logger.error(f"Keep-alive query failed: {e}")
             # 3) 返回细粒度状态
-            return {"page_ok": page_ok, "htmlrule_ok": htmlrule_ok}
+            return {"page_ok": page_ok, "api_ok": api_ok}
         except Exception as e:
             logger.error(f"Keep-alive critical failure: {e}")
-            return {"page_ok": page_ok, "htmlrule_ok": htmlrule_ok}
+            return {"page_ok": page_ok, "api_ok": api_ok}
 
     # --- Check In (Integral) ---
     def check_in_integral(self):

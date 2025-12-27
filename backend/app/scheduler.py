@@ -349,7 +349,9 @@ def run_global_keep_alive():
                         db.commit()
                         db.refresh(cache)
                     
-                    do_htmlrule = True
+                    # Note: 'htmlrule_backoff_until' column name is preserved to avoid migration, 
+                    # but it now controls backoff for getUserCancleConfig query.
+                    do_keepalive = True
                     if cache.htmlrule_backoff_until:
                         try:
                             backoff_time = cache.htmlrule_backoff_until
@@ -360,23 +362,23 @@ def run_global_keep_alive():
                                 cmp_now = now_naive
                                 backoff_cmp = backoff_time
                             if backoff_cmp > cmp_now:
-                                do_htmlrule = False
+                                do_keepalive = False
                         except Exception as cmp_error:
                             logger.warning(f"Backoff time compare failed for user {user.id}: {cmp_error}")
-                            do_htmlrule = False
+                            do_keepalive = False
                     
                     try:
-                        status = service.keep_alive(do_htmlrule=do_htmlrule)
+                        status = service.keep_alive(do_keepalive_query=do_keepalive)
                         page_ok = bool((status or {}).get('page_ok'))
-                        htmlrule_ok = bool((status or {}).get('htmlrule_ok'))
+                        api_ok = bool((status or {}).get('api_ok'))
                         
-                        if htmlrule_ok:
+                        if api_ok:
                             cache.keepalive_fail_count = 0
                             cache.htmlrule_backoff_until = None
                             db.add(cache)
                             db.commit()
-                        elif page_ok and not htmlrule_ok:
-                            # 2024-12-27: htmlRule failing (40001).
+                        elif page_ok and not api_ok:
+                            # 2024-12-27: keep-alive query (getUserCancleConfig) failing.
                             # Check if session is actually valid using a read operation.
                             is_valid = False
                             try:
@@ -386,14 +388,14 @@ def run_global_keep_alive():
                                 is_valid = False
 
                             if is_valid:
-                                logger.warning(f"User {user.id} keep-alive partial: Page OK, but htmlRule failed. Session verified via get_user_info.")
+                                logger.warning(f"User {user.id} keep-alive partial: Page OK, but API failed. Session verified via get_user_info.")
                                 # Reset fail count because session is actually valid
                                 cache.keepalive_fail_count = 0
                                 db.add(cache)
                                 db.commit()
                             else:
                                 # Session is DEAD.
-                                logger.error(f"User {user.id} keep-alive FAILED: htmlRule failed AND get_user_info failed.")
+                                logger.error(f"User {user.id} keep-alive FAILED: API failed AND get_user_info failed.")
                                 cache.keepalive_fail_count = (cache.keepalive_fail_count or 0) + 1
                                 if cache.keepalive_fail_count >= 2:
                                     # Send notification
