@@ -177,6 +177,13 @@ def signin(
             except Exception:
                 pass
         res = AuthService.sign_in(config.sess_id, config.major, config.minor)
+        
+        # 发送签到成功通知
+        try:
+            bark_service.send_signin_success_notification(db, current_user.id)
+        except Exception as notify_error:
+            pass
+            
         return {"message": res}
     except HTTPException:
         raise

@@ -379,10 +379,24 @@ def run_global_keep_alive():
                     cache.keepalive_fail_count = (cache.keepalive_fail_count or 0) + 1
                     if cache.keepalive_fail_count >= 2:
                         cache.htmlrule_backoff_until = now_naive + timedelta(minutes=30)
+                        
+                        # check if user has seat before sending restricted notification
+                        has_seat = False
                         try:
-                            bark_service.send_account_restricted_notification(db, user.id)
-                        except Exception as notify_error:
-                            logger.error(f"发送账号限制通知失败: {notify_error}")
+                            # Try to get reserve info to see if user has a seat
+                            # If they have a seat, the restriction might be partial (htmlRule blocked)
+                            # but we shouldn't scare them if they are just sitting there.
+                            ri = service.get_reserve_info()
+                            if ri:
+                                has_seat = True
+                        except Exception:
+                            pass
+
+                        if not has_seat:
+                            try:
+                                bark_service.send_account_restricted_notification(db, user.id)
+                            except Exception as notify_error:
+                                logger.error(f"发送账号限制通知失败: {notify_error}")
                     db.add(cache)
                     db.commit()
                 
