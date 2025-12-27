@@ -403,6 +403,18 @@ def run_global_keep_alive():
                                         bark_service.send_cookie_invalid_notification(db, user.id)
                                     except Exception as notify_error:
                                         logger.error(f"发送Cookie失效通知失败: {notify_error}")
+                                    
+                                    # Deactivate cookies to stop keep-alive
+                                    try:
+                                        if user.wechat_config:
+                                            user.wechat_config.cookie = None
+                                            user.wechat_config.sess_id = None
+                                            db.add(user.wechat_config)
+                                            db.commit()
+                                            logger.info(f"Deactivated cookies for user {user.id} due to persistent failures.")
+                                    except Exception as db_error:
+                                        logger.error(f"Failed to deactivate cookies for user {user.id}: {db_error}")
+
                                 db.add(cache)
                                 db.commit()
                     except Exception as e:
