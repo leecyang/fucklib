@@ -46,6 +46,15 @@ class LibService:
         self._init_cookie()
 
     def _init_cookie(self):
+        # Clean existing cookie: remove generated fields to avoid duplication
+        clean_cookie = []
+        if self.cookie:
+            for chunk in self.cookie.split(';'):
+                key = chunk.strip().split('=')[0]
+                if key not in ['SERVERID', 'Hm_lvt_7ecd21a13263a714793f376c18038a87', 'Hm_lpvt_7ecd21a13263a714793f376c18038a87', 'FROM_TYPE', 'v']:
+                    clean_cookie.append(chunk.strip())
+        self.cookie = '; '.join(clean_cookie)
+
         now = int(time.time())
         # Generate 4 timestamps for Hm_lvt (simulate recent visits)
         ts_list = [str(now - i * 86400 - random.randint(0, 3600)) for i in range(4)]

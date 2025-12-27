@@ -376,15 +376,33 @@ def run_global_keep_alive():
                             db.add(cache)
                             db.commit()
                         elif page_ok and not htmlrule_ok:
-                            # 2024-12-27: htmlRule failing (40001) is common even if account is fine.
-                            # As long as page_ok (GET /index.html) succeeds, we consider the session alive.
-                            # We stop sending 'account_restricted' notification based solely on htmlRule failure.
-                            logger.warning(f"User {user.id} keep-alive partial: Page OK, but htmlRule failed. Assuming session is valid.")
-                            
-                            # Reset fail count because page access was successful
-                            cache.keepalive_fail_count = 0
-                            db.add(cache)
-                            db.commit()
+                            # 2024-12-27: htmlRule failing (40001).
+                            # Check if session is actually valid using a read operation.
+                            is_valid = False
+                            try:
+                                service.get_user_info()
+                                is_valid = True
+                            except Exception:
+                                is_valid = False
+
+                            if is_valid:
+                                logger.warning(f"User {user.id} keep-alive partial: Page OK, but htmlRule failed. Session verified via get_user_info.")
+                                # Reset fail count because session is actually valid
+                                cache.keepalive_fail_count = 0
+                                db.add(cache)
+                                db.commit()
+                            else:
+                                # Session is DEAD.
+                                logger.error(f"User {user.id} keep-alive FAILED: htmlRule failed AND get_user_info failed.")
+                                cache.keepalive_fail_count = (cache.keepalive_fail_count or 0) + 1
+                                if cache.keepalive_fail_count >= 2:
+                                    # Send notification
+                                    try:
+                                        bark_service.send_cookie_invalid_notification(db, user.id)
+                                    except Exception as notify_error:
+                                        logger.error(f"发送Cookie失效通知失败: {notify_error}")
+                                db.add(cache)
+                                db.commit()
                     except Exception as e:
                         # Log but do not stop processing other users
                         logger.warning(f"Keep-alive failed for user {user.id}: {e}")
