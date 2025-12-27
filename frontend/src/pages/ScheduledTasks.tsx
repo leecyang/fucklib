@@ -271,9 +271,9 @@ const ScheduledTasks: React.FC = () => {
             </div>
 
             {/* 移动端卡片视图 */}
-            <div className="md:hidden grid gap-4">
+            <div className="md:hidden grid gap-4 w-full max-w-full">
                 {tasks.map(task => (
-                    <div key={task.id} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative">
+                    <div key={task.id} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 relative w-full">
                         <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-3">
                                 <div className={cn("p-2 rounded-lg", task.task_type === 'signin' ? 'bg-indigo-50 text-indigo-600' : 'bg-violet-50 text-violet-600')}>

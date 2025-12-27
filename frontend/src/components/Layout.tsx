@@ -62,9 +62,9 @@ export default function Layout() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 relative overflow-y-auto w-full">
+      <main className="flex-1 relative overflow-y-auto overflow-x-hidden w-full">
         {/* Mobile Header (Optional, if we want a title bar on mobile) */}
-        <div className="md:hidden sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+        <div className="md:hidden sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center justify-between w-full">
             <h1 className="text-lg font-bold text-indigo-600 flex items-center gap-2">
                 <BookOpen className="w-6 h-6" />
                 FuckLib
