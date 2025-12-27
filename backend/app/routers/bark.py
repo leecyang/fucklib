@@ -85,9 +85,9 @@ def test_bark_push(
         db=db,
         user_id=current_user.id,
         notification_type=bark_service.NotificationType.TEST,
-        title="🧪 Bark推送测试",
+        title="Bark推送测试",
         content="恭喜！您的Bark推送配置成功，现在可以接收实时通知了！",
-        icon="✨",
+        icon=None,
         force=True
     )
     

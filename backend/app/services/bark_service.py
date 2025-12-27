@@ -120,23 +120,14 @@ def send_notification(
         encoded_title = urllib.parse.quote(title)
         encoded_content = urllib.parse.quote(content)
         
-        # 构建完整URL：https://api.day.app/{key}/{title}/{body}
-        # 将 emoji 图标拼接到标题前
-        full_title = f"{icon} {title}" if icon else title
-        encoded_title = urllib.parse.quote(full_title)
-        encoded_content = urllib.parse.quote(content)
-        
         push_url = f"{server_url}/{bark_key}/{encoded_title}/{encoded_content}"
         
-        # 添加可选参数
         params = []
-        # 使用固定网站图标
-        params.append(f"icon={urllib.parse.quote('https://lingxilearn.cn/vite.svg')}")
+        params.append(f"icon={urllib.parse.quote('https://lingxilearn.cn/logo.jpg')}")
         
         if url:
             params.append(f"url={urllib.parse.quote(url)}")
         
-        # 添加分组（便于Bark中分类查看）
         params.append(f"group={urllib.parse.quote('图书馆助手')}")
         
         if params:
@@ -199,9 +190,9 @@ def send_cookie_invalid_notification(db: Session, user_id: int) -> bool:
         db=db,
         user_id=user_id,
         notification_type=NotificationType.COOKIE_INVALID,
-        title="🔑 Cookie已失效",
+        title="Cookie已失效",
         content="您的微信Cookie已失效或被限制，请重新扫码登录以恢复自动预约功能",
-        icon="🔐",
+        icon=None,
         force=True  # Cookie失效是关键通知，强制发送
     )
 
@@ -212,9 +203,9 @@ def send_sessid_missing_notification(db: Session, user_id: int) -> bool:
         db=db,
         user_id=user_id,
         notification_type=NotificationType.SESSID_MISSING,
-        title="🔧 WeChat SessID 缺失",
+        title="WeChat SessID 缺失",
         content="未绑定微信 SessID，请通过扫码绑定以启用蓝牙自动签到",
-        icon="🧩",
+        icon=None,
         force=True
     )
 
@@ -225,9 +216,9 @@ def send_bluetooth_missing_notification(db: Session, user_id: int) -> bool:
         db=db,
         user_id=user_id,
         notification_type=NotificationType.BLUETOOTH_MISSING,
-        title="📶 蓝牙配置缺失",
+        title="蓝牙配置缺失",
         content="蓝牙打卡配置未完整设置（major/minor），请在设置中补充以启用自动签到",
-        icon="📡",
+        icon=None,
         force=True
     )
 
@@ -242,9 +233,9 @@ def send_reserve_success_notification(db: Session, user_id: int, seat_info: dict
         db=db,
         user_id=user_id,
         notification_type=NotificationType.RESERVE_SUCCESS,
-        title="🎉 座位预约成功",
+        title="座位预约成功",
         content=f"已成功预约【{lib_name} - {floor}】的座位 {seat_name}",
-        icon="🪑"
+        icon=None
     )
 
 
@@ -254,9 +245,9 @@ def send_reserve_failed_notification(db: Session, user_id: int, error_msg: str) 
         db=db,
         user_id=user_id,
         notification_type=NotificationType.RESERVE_FAILED,
-        title="❌ 座位预约失败",
+        title="座位预约失败",
         content=f"预约座位失败：{error_msg}，请检查配置或手动预约",
-        icon="⚠️"
+        icon=None
     )
 
 
@@ -266,9 +257,9 @@ def send_signin_success_notification(db: Session, user_id: int) -> bool:
         db=db,
         user_id=user_id,
         notification_type=NotificationType.SIGNIN_SUCCESS,
-        title="✅ 签到成功",
+        title="签到成功",
         content="已成功签到座位，祝您学习愉快！",
-        icon="📚"
+        icon=None
     )
 
 
@@ -278,9 +269,9 @@ def send_supervised_notification(db: Session, user_id: int) -> bool:
         db=db,
         user_id=user_id,
         notification_type=NotificationType.SEAT_SUPERVISED,
-        title="⚠️ 座位被监督举报",
+        title="座位被监督举报",
         content="您的座位已被监督举报，系统将在5分钟后自动蓝牙签到以解除警告",
-        icon="🚨",
+        icon=None,
         force=True  # 监督举报是高优先级通知
     )
 
@@ -291,9 +282,9 @@ def send_expiration_notification(db: Session, user_id: int, minutes_left: int) -
         db=db,
         user_id=user_id,
         notification_type=NotificationType.RESERVE_EXPIRING,
-        title="⏰ 预约即将过期",
+        title="预约即将过期",
         content=f"您的座位预约将在{int(minutes_left)}分钟后过期，请尽快签到！",
-        icon="⏳",
+        icon=None,
         force=True  # 过期提醒是高优先级通知
     )
 
@@ -303,8 +294,8 @@ def send_account_restricted_notification(db: Session, user_id: int) -> bool:
         db=db,
         user_id=user_id,
         notification_type=NotificationType.ACCOUNT_RESTRICTED,
-        title="🚫 账号被限制预约",
+        title="账号被限制预约",
         content="系统检测到您的账号预约功能被限制。建议稍后重试或减少频繁访问，必要时重新授权。",
-        icon="⛔",
+        icon=None,
         force=True
     )
