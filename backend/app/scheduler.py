@@ -318,97 +318,111 @@ def run_global_keep_alive():
         
         for user in users:
             try:
-                if not user.wechat_config or not user.wechat_config.cookie:
-                    continue
-                    
-                # Define callback to save updated cookie
-                # We need to capture user_id to query fresh if needed, but 'user' object is attached to session
-                def save_cookie(new_cookie):
-                    try:
-                        # Ensure we are working with the latest state
-                        user.wechat_config.cookie = new_cookie
-                        db.add(user.wechat_config)
-                        db.commit()
-                    except Exception as e:
-                        logger.error(f"Failed to save cookie for user {user.id}: {e}")
-
-                # Initialize service with current cookie
-                service = LibService(user.wechat_config.cookie, save_cookie)
-                
-                try:
-                    time.sleep(random.uniform(0.2, 1.0))
-                except Exception:
-                    pass
-                
-                tz = getattr(scheduler, 'timezone', None)
-                now = datetime.now(tz) if tz else datetime.now()
-                now_naive = now.replace(tzinfo=None)
-                cache = db.query(models.SeatStatusCache).filter(models.SeatStatusCache.user_id == user.id).first()
-                if not cache:
-                    cache = models.SeatStatusCache(user_id=user.id, keepalive_fail_count=0)
-                    db.add(cache)
-                    db.commit()
-                    db.refresh(cache)
-                
-                do_htmlrule = True
-                if cache.htmlrule_backoff_until:
-                    try:
-                        backoff_time = cache.htmlrule_backoff_until
-                        if backoff_time.tzinfo is not None:
-                            cmp_now = now
-                            backoff_cmp = backoff_time
-                        else:
-                            cmp_now = now_naive
-                            backoff_cmp = backoff_time
-                        if backoff_cmp > cmp_now:
-                            do_htmlrule = False
-                    except Exception as cmp_error:
-                        logger.warning(f"Backoff time compare failed for user {user.id}: {cmp_error}")
-                        do_htmlrule = False
-                
-                status = service.keep_alive(do_htmlrule=do_htmlrule)
-                page_ok = bool((status or {}).get('page_ok'))
-                htmlrule_ok = bool((status or {}).get('htmlrule_ok'))
-                
-                if htmlrule_ok:
-                    cache.keepalive_fail_count = 0
-                    cache.htmlrule_backoff_until = None
-                    db.add(cache)
-                    db.commit()
-                elif page_ok and not htmlrule_ok:
-                    cache.keepalive_fail_count = (cache.keepalive_fail_count or 0) + 1
-                    if cache.keepalive_fail_count >= 2:
-                        cache.htmlrule_backoff_until = now_naive + timedelta(minutes=30)
-                        
-                        # check if user has seat before sending restricted notification
-                        has_seat = False
+                # 1. Maintain Authorization Cookie (for reservation)
+                if user.wechat_config and user.wechat_config.cookie:
+                    # Define callback to save updated cookie
+                    # We need to capture user_id to query fresh if needed, but 'user' object is attached to session
+                    def save_cookie(new_cookie):
                         try:
-                            # Try to get reserve info to see if user has a seat
-                            # If they have a seat, the restriction might be partial (htmlRule blocked)
-                            # but we shouldn't scare them if they are just sitting there.
-                            ri = service.get_reserve_info()
-                            if ri:
-                                has_seat = True
-                        except Exception:
-                            pass
+                            # Ensure we are working with the latest state
+                            user.wechat_config.cookie = new_cookie
+                            db.add(user.wechat_config)
+                            db.commit()
+                        except Exception as e:
+                            logger.error(f"Failed to save cookie for user {user.id}: {e}")
 
-                        if not has_seat:
-                            try:
-                                bark_service.send_account_restricted_notification(db, user.id)
-                            except Exception as notify_error:
-                                logger.error(f"发送账号限制通知失败: {notify_error}")
-                    db.add(cache)
-                    db.commit()
+                    # Initialize service with current cookie
+                    service = LibService(user.wechat_config.cookie, save_cookie)
+                    
+                    try:
+                        time.sleep(random.uniform(0.2, 1.0))
+                    except Exception:
+                        pass
+                    
+                    tz = getattr(scheduler, 'timezone', None)
+                    now = datetime.now(tz) if tz else datetime.now()
+                    now_naive = now.replace(tzinfo=None)
+                    cache = db.query(models.SeatStatusCache).filter(models.SeatStatusCache.user_id == user.id).first()
+                    if not cache:
+                        cache = models.SeatStatusCache(user_id=user.id, keepalive_fail_count=0)
+                        db.add(cache)
+                        db.commit()
+                        db.refresh(cache)
+                    
+                    do_htmlrule = True
+                    if cache.htmlrule_backoff_until:
+                        try:
+                            backoff_time = cache.htmlrule_backoff_until
+                            if backoff_time.tzinfo is not None:
+                                cmp_now = now
+                                backoff_cmp = backoff_time
+                            else:
+                                cmp_now = now_naive
+                                backoff_cmp = backoff_time
+                            if backoff_cmp > cmp_now:
+                                do_htmlrule = False
+                        except Exception as cmp_error:
+                            logger.warning(f"Backoff time compare failed for user {user.id}: {cmp_error}")
+                            do_htmlrule = False
+                    
+                    try:
+                        status = service.keep_alive(do_htmlrule=do_htmlrule)
+                        page_ok = bool((status or {}).get('page_ok'))
+                        htmlrule_ok = bool((status or {}).get('htmlrule_ok'))
+                        
+                        if htmlrule_ok:
+                            cache.keepalive_fail_count = 0
+                            cache.htmlrule_backoff_until = None
+                            db.add(cache)
+                            db.commit()
+                        elif page_ok and not htmlrule_ok:
+                            cache.keepalive_fail_count = (cache.keepalive_fail_count or 0) + 1
+                            if cache.keepalive_fail_count >= 2:
+                                cache.htmlrule_backoff_until = now_naive + timedelta(minutes=30)
+                                
+                                # check if user has seat before sending restricted notification
+                                has_seat = False
+                                try:
+                                    # Try to get reserve info to see if user has a seat
+                                    # If they have a seat, the restriction might be partial (htmlRule blocked)
+                                    # but we shouldn't scare them if they are just sitting there.
+                                    # Use htmlRule for strict keep-alive compliance
+                                    service.keep_alive(silent=True)
+                                    
+                                    # Check seat status for notification logic
+                                    ri = service.get_reserve_info(silent=True)
+                                    if ri:
+                                        has_seat = True
+                                except Exception:
+                                    pass
+
+                                if not has_seat:
+                                    try:
+                                        bark_service.send_account_restricted_notification(db, user.id)
+                                    except Exception as notify_error:
+                                        logger.error(f"发送账号限制通知失败: {notify_error}")
+                            db.add(cache)
+                            db.commit()
+                    except Exception as e:
+                        # Log but do not stop processing other users
+                        logger.warning(f"Keep-alive failed for user {user.id}: {e}")
+                        emsg = str(e).lower()
+                        try:
+                            if '40001' in emsg or 'cookie失效' in emsg or '403' in emsg:
+                                bark_service.send_cookie_invalid_notification(db, user.id)
+                        except Exception as notify_error:
+                            logger.error(f"发送Cookie失效通知失败: {notify_error}")
+
+                # 2. Maintain wechatSESS_ID (for bluetooth check-in)
+                if user.wechat_config and user.wechat_config.sess_id:
+                     try:
+                         # Lightweight keep-alive for SESS_ID
+                         AuthService.keep_alive_sess_id(user.wechat_config.sess_id)
+                     except Exception as e:
+                         logger.warning(f"SESS_ID keep-alive failed for user {user.id}: {e}")
                 
             except Exception as e:
-                # Log but do not stop processing other users
-                logger.warning(f"Keep-alive failed for user {user.id}: {e}")
-                emsg = str(e).lower()
-                try:
-                    if '40001' in emsg or 'cookie失效' in emsg or '403' in emsg:
-                        bark_service.send_cookie_invalid_notification(db, user.id)
-                except Exception as notify_error:
-                    logger.error(f"发送Cookie失效通知失败: {notify_error}")
+                logger.error(f"Error processing user {user.id}: {e}")
                 
     except Exception as e:
         logger.error(f"Global keep-alive task critical failure: {e}")

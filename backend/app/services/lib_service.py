@@ -30,10 +30,10 @@ class LibService:
             'Connection': 'keep-alive',
             'App-Version': '2.0.14',
             'Origin': 'https://web.traceint.com',
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 11; M2012K11AC Build/RKQ1.200826.002; wv) AppleWebKit/537.36 '
-                          '(KHTML, like Gecko) Version/4.0 Chrome/86.0.4240.99 XWEB/3149 MMWEBSDK/20211001 Mobile '
-                          'Safari/537.36 MMWEBID/68 MicroMessenger/8.0.16.2040(0x28001053) Process/toolsmp '
-                          'WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G977B Build/QP1A.190711.020; wv) AppleWebKit/537.36 '
+                          '(KHTML, like Gecko) Version/4.0 Chrome/86.0.4240.99 XWEB/3195 MMWEBSDK/20220105 Mobile '
+                          'Safari/537.36 MMWEBID/3552 MicroMessenger/8.0.19.2080(0x2800133D) Process/appbrand2 '
+                          'WeChat/arm64 Weixin NetType/4G Language/zh_CN ABI/arm64 MiniProgramEnv/android',
             'Content-Type': 'application/json',
             'Accept': '*/*',
             'Sec-Fetch-Site': 'same-origin',
@@ -46,17 +46,22 @@ class LibService:
         self._init_cookie()
 
     def _init_cookie(self):
+        now = int(time.time())
+        # Generate 4 timestamps for Hm_lvt (simulate recent visits)
+        ts_list = [str(now - i * 86400 - random.randint(0, 3600)) for i in range(4)]
+        ts_str = ",".join(sorted(ts_list))
+        
         self.cookie = (
             self.cookie
             + '; FROM_TYPE=weixin; v=5.5; '
-            + 'Hm_lvt_7ecd21a13263a714793f376c18038a87=1713417820,1714277047,1714304621,1714376091; '
+            + f'Hm_lvt_7ecd21a13263a714793f376c18038a87={ts_str}; '
             + 'Hm_lpvt_7ecd21a13263a714793f376c18038a87='
-            + str(int(time.time() - 1))
+            + str(now)
             + '; SERVERID='
             + random.choice(self.SERVERID)
             + '|'
-            + str(int(time.time() - 1))
-            + '|1714376087'
+            + str(now)
+            + '|' + str(now - 86400) # Previous timestamp
         )
         self.headers['Cookie'] = self.cookie
         self.session.headers.update(self.headers)
@@ -122,7 +127,7 @@ class LibService:
             except Exception as e:
                 logger.error(f"Failed to save updated cookie: {e}")
 
-    def _post(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _post(self, payload: Dict[str, Any], silent: bool = False) -> Dict[str, Any]:
         try:
             r = self.session.post(self.BASE_URL, json=payload, timeout=10)
             r.raise_for_status()
@@ -139,7 +144,8 @@ class LibService:
 
             data = r.json()
             if 'errors' in data:
-                logger.error(f"GraphQL Error for {payload.get('operationName')}: {data['errors']}")
+                if not silent:
+                    logger.error(f"GraphQL Error for {payload.get('operationName')}: {data['errors']}")
                 try:
                     errs = data.get('errors') or []
                     for e in errs:
@@ -153,8 +159,9 @@ class LibService:
                     raise ex
             return data
         except Exception as e:
-            logger.error(f"Request failed: {e}")
-            if 'r' in locals() and r is not None:
+            if not silent:
+                logger.error(f"Request failed: {e}")
+            if 'r' in locals() and r is not None and not silent:
                 logger.error(f"Response content: {r.text}")
             raise
 
@@ -303,7 +310,25 @@ class LibService:
         
         return res.get('data', {}).get('userAuth', {}).get('reserve', {}).get('reserveCancle')
 
-    def get_reserve_info(self):
+    def keep_alive(self, silent: bool = False):
+        """
+        Strictly matches igotolib-person/crawldata.py cookie_update method.
+        Uses htmlRule query to refresh cookies.
+        """
+        rule_payload = {
+            "operationName": "htmlRule", 
+            "query": "query htmlRule {\n userAuth {\n rule {\n htmlRule\n }\n }\n}"
+        }
+        try:
+            # _post will automatically update cookies from response
+            self._post(rule_payload, silent=silent)
+            return True
+        except Exception as e:
+            if not silent:
+                logger.error(f"Keep-alive (htmlRule) failed: {e}")
+            return False
+
+    def get_reserve_info(self, silent: bool = False):
         # API 9 (getReserveInfo) is unreliable when pre-selected seat is occupied by others
         # User instructed to rely on index API (API 8) and check if data.userAuth.reserve.reserve is null
         try:
@@ -313,7 +338,7 @@ class LibService:
                 "query": "query index { userAuth { reserve { reserve { token status user_id user_nick sch_name lib_id lib_name lib_floor seat_key seat_name date exp_date exp_date_str validate_date hold_date diff diff_str mark_source isRecordUser isChooseSeat isRecord mistakeNum openTime threshold daynum mistakeNum closeTime timerange forbidQrValid renewTimeNext forbidRenewTime forbidWechatCancle } getSToken } } }",
                 "variables": {}
             }
-            r = self._post(index_payload)
+            r = self._post(index_payload, silent=silent)
             reserve_data = ((r.get('data') or {}).get('userAuth') or {}).get('reserve', {}).get('reserve')
             
             # Comprehensive validation based on user feedback
@@ -323,7 +348,8 @@ class LibService:
             # 1. Check status (0 or None means no valid reservation)
             # Status: 0=None, 1=Reserved, 2=Signed In, 3=In Use, 4=Away, 5=Supervised/Finished
             status = reserve_data.get('status')
-            logger.info(f"DEBUG: get_reserve_info raw status: {status}, data: {reserve_data}")
+            if not silent:
+                logger.info(f"DEBUG: get_reserve_info raw status: {status}, data: {reserve_data}")
             
             # Fix: Only allow active statuses.
             valid_statuses = [1, 2, 3, 4, 5]
@@ -351,12 +377,15 @@ class LibService:
                     today = datetime.now().date()
                     if res_date < today:
                         if status == 5:
-                            logger.info(f"Allowing past reservation for status 5 (Supervised). Date: {date_str}")
+                            if not silent:
+                                logger.info(f"Allowing past reservation for status 5 (Supervised). Date: {date_str}")
                         else:
-                            logger.info(f"Ignoring past reservation for {date_str} (Status: {status})")
+                            if not silent:
+                                logger.info(f"Ignoring past reservation for {date_str} (Status: {status})")
                             return None
                 except Exception as e:
-                    logger.warning(f"Date parse failed: {e}")
+                    if not silent:
+                        logger.warning(f"Date parse failed: {e}")
 
             # Note: Do not check expiration locally. Trust the server's status.
             # If status is active, the seat is ours even if local time > exp_date.
@@ -365,7 +394,8 @@ class LibService:
             reserve_data['selection_status'] = selection_status
             return reserve_data
         except Exception as e:
-            logger.error(f"get_reserve_info failed: {e}")
+            if not silent:
+                logger.error(f"get_reserve_info failed: {e}")
             return None
 
     # --- Interactive Info ---

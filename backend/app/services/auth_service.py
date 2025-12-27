@@ -19,6 +19,18 @@ class AuthService:
         data = {"r": "https://web.traceint.com/web/index.html", "code": code, "state": 1}
         session = requests.Session()
         
+        # Unified headers for all requests
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G977B Build/QP1A.190711.020; wv) AppleWebKit/537.36 '
+                          '(KHTML, like Gecko) Version/4.0 Chrome/86.0.4240.99 XWEB/3195 MMWEBSDK/20220105 Mobile '
+                          'Safari/537.36 MMWEBID/3552 MicroMessenger/8.0.19.2080(0x2800133D) Process/appbrand2 '
+                          'WeChat/arm64 Weixin NetType/4G Language/zh_CN ABI/arm64 MiniProgramEnv/android',
+            'Accept': '*/*',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Connection': 'keep-alive'
+        }
+        session.headers.update(headers)
+        
         if is_auth_url:
             # For Authorization cookie
             r = session.get("http://wechat.v2.traceint.com/index.php/urlNew/auth.html", params=data, allow_redirects=False)
@@ -33,6 +45,39 @@ class AuthService:
                 return 'wechatSESS_ID=' + wechatSESS_ID
         
         raise Exception("Failed to get cookie")
+
+    @staticmethod
+    def keep_alive_sess_id(sess_id: str) -> bool:
+        """
+        Refresh wechatSESS_ID by requesting the reserve index endpoint (Strictly matching reference).
+        Returns True if successful (200 OK), False otherwise.
+        """
+        if not sess_id:
+            return False
+            
+        # Reference: igotolib-person/crawldata.py wechat_update method
+        url = 'https://wechat.v2.traceint.com/index.php/reserve/index.html?f=wechat'
+        headers = {
+            'Host': 'wechat.v2.traceint.com',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G977B Build/QP1A.190711.020; wv) AppleWebKit/537.36 '
+                          '(KHTML, like Gecko) Version/4.0 Chrome/86.0.4240.99 XWEB/3195 MMWEBSDK/20220105 Mobile '
+                          'Safari/537.36 MMWEBID/3552 MicroMessenger/8.0.19.2080(0x2800133D) Process/appbrand2 '
+                          'WeChat/arm64 Weixin NetType/4G Language/zh_CN ABI/arm64 MiniProgramEnv/android',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;'
+                      'q=0.9,image/avif,image/webp,image/apng,image/wxpic,image/sharpp,image/apng,image/tpg,'
+                      '*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+            'Accept-Encoding': 'gzip, deflate', 
+            'Accept-Language': 'zh-CN,en-US;q=0.8', 
+            'Cookie': sess_id
+        }
+        
+        try:
+            r = requests.get(url, headers=headers, timeout=10)
+            if r.status_code == 200:
+                return True
+            return False
+        except Exception:
+            return False
 
     @staticmethod
     def _encrypt(password: str, public_key_str: str) -> str:
