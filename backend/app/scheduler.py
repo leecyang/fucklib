@@ -376,31 +376,13 @@ def run_global_keep_alive():
                             db.add(cache)
                             db.commit()
                         elif page_ok and not htmlrule_ok:
-                            cache.keepalive_fail_count = (cache.keepalive_fail_count or 0) + 1
-                            if cache.keepalive_fail_count >= 2:
-                                cache.htmlrule_backoff_until = now_naive + timedelta(minutes=30)
-                                
-                                # check if user has seat before sending restricted notification
-                                has_seat = False
-                                try:
-                                    # Try to get reserve info to see if user has a seat
-                                    # If they have a seat, the restriction might be partial (htmlRule blocked)
-                                    # but we shouldn't scare them if they are just sitting there.
-                                    # Use htmlRule for strict keep-alive compliance
-                                    service.keep_alive(silent=True)
-                                    
-                                    # Check seat status for notification logic
-                                    ri = service.get_reserve_info(silent=True)
-                                    if ri:
-                                        has_seat = True
-                                except Exception:
-                                    pass
-
-                                if not has_seat:
-                                    try:
-                                        bark_service.send_account_restricted_notification(db, user.id)
-                                    except Exception as notify_error:
-                                        logger.error(f"发送账号限制通知失败: {notify_error}")
+                            # 2024-12-27: htmlRule failing (40001) is common even if account is fine.
+                            # As long as page_ok (GET /index.html) succeeds, we consider the session alive.
+                            # We stop sending 'account_restricted' notification based solely on htmlRule failure.
+                            logger.warning(f"User {user.id} keep-alive partial: Page OK, but htmlRule failed. Assuming session is valid.")
+                            
+                            # Reset fail count because page access was successful
+                            cache.keepalive_fail_count = 0
                             db.add(cache)
                             db.commit()
                     except Exception as e:
